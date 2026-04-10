@@ -1,11 +1,13 @@
-import Header from "./layouts/Header"
+import MainPage from "./layouts/MainPage"
+import Sidebar from "./layouts/Sidebar"
 
 function App() {
 
   return (
-    <>
-      <Header />
-    </>
+    <div className="flex flex-row min-h-screen">
+      <Sidebar />
+      <MainPage />
+    </div>
   )
 }
 

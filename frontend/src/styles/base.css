@@ -1,6 +1,6 @@
 @layer base {
     * {
-        @apply box-border font-primary bg-white text-secondary;
+        @apply box-border font-normal bg-background text-txt;
         @apply text-lg leading-normal;
     }
     

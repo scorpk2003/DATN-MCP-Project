@@ -1,8 +1,8 @@
 @theme {
     --font-primary: "Iosevka Charon Mono", monospace;
 
-    --color-primary: #fcc36e;
-    --color-secondary: #6483c0;
+    --color-txt: #2a2529;
+    --color-primary: #f3f0e7;
 
     --color-background: #ffe3b3;
 }
