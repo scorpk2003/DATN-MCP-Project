@@ -1,0 +1,14 @@
+@layer base {
+    * {
+        @apply box-border font-primary bg-white text-secondary;
+        @apply text-lg leading-normal;
+    }
+    
+    a {
+        @apply text-inherit no-underline;
+    }
+    
+    img {
+        @apply block max-w-full h-auto;
+    }
+}
