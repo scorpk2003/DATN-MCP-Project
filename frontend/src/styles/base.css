@@ -1,6 +1,6 @@
 @layer base {
     * {
-        @apply box-border font-normal bg-background text-txt;
+        @apply box-border font-normal bg-background text-txt max-h-screen;
         @apply text-lg leading-normal;
     }
     
@@ -11,4 +11,10 @@
     img {
         @apply block max-w-full h-auto;
     }
+
+    html *::-webkit-scrollbar {
+        border-radius: 0;
+        width: 3px;
+    }
+
 }
