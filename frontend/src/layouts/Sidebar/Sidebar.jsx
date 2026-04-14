@@ -55,14 +55,14 @@ function Sidebar() {
         console.log("Clicked");
     }
     return (
-        <div className="p-10 bg-txt rounded-r-lg max-w-sm w-55 items-center flex flex-col gap-5 **:bg-transparent">
+        <div className="p-8 bg-txt rounded-r-lg max-w-sm w-55 items-center flex flex-col gap-5 **:bg-transparent block">
             <div className="basis-2/5 items-center flex">
                 <p className="text-primary font-bold text-2xl">Infomation</p>
             </div>
-            <nav className="p-2 my-3 h-fullmax-w-sm overflow-y-auto scroll-smooth flex flex-col gap-2 bg-transparent rounded-lg scroll-my-2">
+            <nav className="p-2 my-3 h-full max-w-sm overflow-y-auto scroll-smooth flex flex-col gap-2 bg-transparent rounded-lg scroll-my-2">
                 {listchat.map((chat) => (
                     <div key={ chat.id } className="h-7.5 flex flex-row items-center w-40 p-2 rounded-lg bg-primary/10 cursor-pointer hover:bg-primary/20 transition-colors duration-200">
-                        <p className="truncate text-sm text-primary max-w-30 items-center basis-5/6">{ chat.des }</p>
+                        <p className="truncate text-sm text-primary max-w-30 items-center basis-5/6 inline-flex">{ chat.des }</p>
                         <FontAwesomeIcon icon={faEllipsisVertical}  className="right-0 basis-1/6" onClick={handleClick}/>
                     </div>
                 ))}
