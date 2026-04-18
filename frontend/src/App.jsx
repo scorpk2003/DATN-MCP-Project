@@ -1,13 +1,15 @@
-import MainPage from "./layouts/MainPage"
-import Sidebar from "./layouts/Sidebar"
+import AppShell from "./layouts/AppShell";
+import HomePage from "./layouts/HomePage";
+import {Route, Routes} from "react-router-dom";
 
 function App() {
 
   return (
-    <div className="flex flex-row h-screen w-screen">
-      <Sidebar />
-      <MainPage />
-    </div>
+    <Routes>
+      <Route element={ <AppShell /> }>
+        <Route path="/" element={ <HomePage /> } />
+      </Route>
+    </Routes>
   )
 }
 

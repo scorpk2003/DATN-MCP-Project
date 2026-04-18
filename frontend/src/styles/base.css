@@ -1,6 +1,6 @@
 @layer base {
     * {
-        @apply box-border font-normal bg-background text-txt max-h-screen;
+        @apply box-border font-normal bg-background text-txt max-h-screen max-w-screen;
         @apply text-lg leading-normal;
     }
     
