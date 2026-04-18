@@ -8,10 +8,10 @@ function Search() {
         Setvalue(e1.value);
     }
     return (
-        <div className="bottom-1/10 flex items-center absolute w-4/5">
+        <div className="bottom-1/10 flex items-center absolute w-full p-8 mx-7">
             <textarea value={ value }
-                className="resize-none w-3/5 flex items-center overflow-y-auto justify-center bg-txt/90 border max-h-35 text-primary placeholder:text-primary/50 py-1.5 px-4 rounded-lg"
-                placeholder="Begin Your Course"
+                className="resize-none w-3/5 flex items-center overflow-y-auto justify-center bg-txt/80 border-none max-h-35 text-primary placeholder:text-primary/50 py-1.5 px-4 rounded-lg"
+                placeholder="Begin Your New Course"
                 rows={ 1 }
                 onChange={handleChange}
             />
