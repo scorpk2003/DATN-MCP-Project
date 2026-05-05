@@ -1,8 +1,35 @@
-**/.env
-**/.env/*
-
 **/node_modules/*
 
 **/*.docx
 *.docx
 *.txt
+
+# ===== Rust / Cargo (GENERAL) =====
+target/
+
+# Cargo lock file
+Cargo.lock
+
+# ===== Rust temporary / backup =====
+**/*.rs.bk
+
+# ===== Build scripts & generated files =====
+**/*.d
+**/*.rlib
+**/*.so
+**/*.dll
+**/*.dylib
+**/*.exe
+
+# ===== Editor / IDE =====
+.idea/
+.vscode/
+*.swp
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== .env =====
+.env
+**/.env
