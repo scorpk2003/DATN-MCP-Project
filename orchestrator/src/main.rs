@@ -1,5 +1,6 @@
 
 use std::{env, time::Duration};
+use rmcp::ClientHandler;
 use tokio::net::TcpListener;
 
 use anyhow::{Result};
@@ -7,6 +8,12 @@ use axum::Router;
 use tokio_util::sync::CancellationToken;
 use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt};
+
+mod api;
+mod agent;
+
+pub use api::*;
+pub use agent::*;
 
 fn init_tracing(level: &str) {
     let filter = match EnvFilter::try_new(level) {
@@ -44,21 +51,13 @@ async fn main() -> Result<()> {
     // Init Logging
     init_tracing(log_level);
 
-    println!("Hello, world!");
+    // Config Server
+    let app = Router::new();
+    let listener = TcpListener::bind(addr.clone()).await?;
 
-    // let app = Router::new();
+    // Server Running
     info!("Orchestrator Server is running on: {}", &addr);
-    // let listener = TcpListener::bind(addr).await?;
-    // axum::serve(listener, app).await?;
-
-    let config = rmcp::transport::sse_server::SseServerConfig {
-        bind: addr.parse()?,
-        sse_path: "/sse".to_string(),
-        post_path: "/mcp".to_string(),
-        ct: CancellationToken::new(),
-        sse_keep_alive: Some(Duration::from_secs(60))
-    };
-    let transport = rmcp::transport::SseServer::new(config);
+    axum::serve(listener, app).await?;
 
     Ok(())
 }
