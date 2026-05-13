@@ -17,3 +17,15 @@ pub struct ExecutionState {
     pub plan: Vec<PlanStep>,
     pub context: AgentContext,
 }
+
+impl Default for ExecutionState {
+    fn default() -> Self {
+        Self {
+            session_id: String::new(),
+            status: ExecutionStatus::Planning,
+            current_step: 0,
+            plan: Vec::new(),
+            context: AgentContext::default(),
+        }
+    }
+}

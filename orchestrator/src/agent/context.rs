@@ -12,6 +12,21 @@ pub struct AgentContext {
     pub scratchpad: Map<String, Value>,
 }
 
+impl Default for AgentContext {
+    fn default() -> Self {
+        Self {
+            session_id: String::new(),
+            goal: None,
+            topic: None,
+            roadmap: None,
+            skill_graph: None,
+            lesson: None,
+            quizz: None,
+            user_confirmed: false,
+            scratchpad: Map::new(),
+        }
+    }
+}
 impl AgentContext {
     pub fn write_obs(&mut self, step_id: usize, obs: &Value) {
         self.scratchpad.insert("last_obs".into(), obs.clone());

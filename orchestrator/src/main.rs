@@ -11,9 +11,11 @@ use tracing_subscriber::{EnvFilter, fmt};
 
 mod api;
 mod agent;
+mod mcp;
 
 pub use api::*;
 pub use agent::*;
+pub use mcp::*;
 
 fn init_tracing(level: &str) {
     let filter = match EnvFilter::try_new(level) {
