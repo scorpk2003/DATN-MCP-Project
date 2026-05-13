@@ -36,6 +36,7 @@ impl AgentKernel {
         Ok(Self { clients, planner, executor, state })
     }
     pub async fn run(&mut self, goal: String) -> Result<()> {
+        self.state.status = ExecutionStatus::Planning;
         Ok(())
     }
 }

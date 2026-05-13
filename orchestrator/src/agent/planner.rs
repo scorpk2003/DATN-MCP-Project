@@ -1,12 +1,12 @@
-use serde_json::{Map, Value};
+use serde_json::{Value};
 
 
 pub struct PlanStep {
     pub id: String,
     pub server: Option<String>,
     pub tool: Option<String>,
-    pub input_mapping: Map<String, Value>,
-    pub output_mapping: Map<String, Value>,
+    pub input_mapping: InputResolver,
+    pub output_mapping: OutputTarget,
     pub waitting: bool,
     pub re_plan: bool,
 }
