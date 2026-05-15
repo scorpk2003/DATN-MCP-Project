@@ -1,6 +1,6 @@
 
 use std::{env, time::Duration};
-use rmcp::ClientHandler;
+use rmcp::{ClientHandler, model::ServerCapabilities};
 use tokio::net::TcpListener;
 
 use anyhow::{Result};

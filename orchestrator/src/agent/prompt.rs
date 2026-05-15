@@ -3,7 +3,6 @@ use async_openai::types::chat::{ChatCompletionRequestSystemMessage,
 use tokio::fs;
 
 
-
 pub struct PromptBuilder {
     pub identity: String,
     pub tool_rules: String,

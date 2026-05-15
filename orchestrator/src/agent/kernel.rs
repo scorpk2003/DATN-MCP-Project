@@ -1,10 +1,8 @@
 use std::collections::HashMap;
 
-use crate::{ExecutionState, ExecutionStatus, McpClient, PlanStep, ServerConfig};
-use async_openai::{Client, config::OpenAIConfig, types::chat::CreateChatCompletionRequest};
+use crate::{ExecutionState, ExecutionStatus, McpClient, PlanStep, PromptBuilder, ServerConfig};
+use async_openai::{Client, config::OpenAIConfig, types::chat::{ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequest, CreateChatCompletionResponse}};
 use anyhow::Result;
-use rmcp::model::PromptMessage;
-use serde_json::{Value, json};
 
 pub struct AgentKernel {
     pub planner: Client<OpenAIConfig>,
@@ -15,9 +13,15 @@ pub struct AgentKernel {
 
 impl Default for AgentKernel {
     fn default() -> Self {
+        let api_key = std::env::var("OPENROUTER_API_KEY").expect("OPENAI_API_KEY must be set");
+        let config = OpenAIConfig::new()
+        .with_api_base("https://openrouter.ai/api/v1")
+        .with_api_key(api_key);
+        let planner = Client::with_config(config.clone());
+        let executor = Client::with_config(config);
         Self {
-            planner: Client::new(),
-            executor: Client::new(),
+            planner,
+            executor,
             clients: HashMap::new(),
             state: ExecutionState::default(),
         }
@@ -41,10 +45,54 @@ impl AgentKernel {
         Ok(())
     }
 
-    fn plan(&mut self) -> Vec<PlanStep> {
-        let mut plan = Vec::new();
-        // let mess = PromptMessage::new(role, content)
+    // async fn plan(&mut self, goal: String) -> Vec<PlanStep> {
+    //     let system_prompt = PromptBuilder::new().await.build_system_prompt();
+    //     let user_prompt = ChatCompletionRequestUserMessageArgs::default().content(goal).build().unwrap();
+    //     let request = CreateChatCompletionRequest {
+    //         messages: vec![
+    //             ChatCompletionRequestMessage::System(system_prompt),
+    //             ChatCompletionRequestMessage::User(user_prompt),
+    //         ],
+    //         model: "gpt-4o-mini".to_string(),
+    //         ..Default::default()
+    //     };
+    //     let response = self.planner.chat().create_byot::<CreateChatCompletionRequest, Vec<PlanStep>>(request).await.unwrap();
+    //     response
+    // }
 
-        plan
+    async fn plan(&mut self, goal: String) -> Result<CreateChatCompletionResponse> {
+        let system_prompt = PromptBuilder::new().await.build_system_prompt();
+        let user_prompt = ChatCompletionRequestUserMessageArgs::default().content(goal).build().unwrap();
+        let request = CreateChatCompletionRequest {
+            messages: vec![
+                ChatCompletionRequestMessage::System(system_prompt),
+                ChatCompletionRequestMessage::User(user_prompt),
+            ],
+            model: "openai/gpt-4o-mini".to_string(),
+            ..Default::default()
+        };
+        let response = match self.planner.chat().create(request).await {
+            Ok(res) => {
+                println!("Plan generated successfully: {:#?}", res);
+                res   
+            },
+            Err(e) => {
+                println!("Failed to generate plan: {}", e);
+                return Err(anyhow::anyhow!("Failed to generate plan: {}", e));
+            }
+        };
+        Ok(response)
+    }
+}
+
+mod test {
+    #[tokio::test]
+    async fn test_generate_plan() {
+        use super::*;
+        dotenv::from_path("../.env").ok();
+        let mut kernel = AgentKernel::default();
+        let goal = "Learn Rust programming language".to_string();
+        let plan = kernel.plan(goal).await;
+        println!("{:#?}", plan);
     }
 }
