@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
-use crate::{ExecutionState, ExecutionStatus, McpClient, ServerConfig};
+use crate::{ExecutionState, ExecutionStatus, McpClient, PlanStep, ServerConfig};
 use async_openai::{Client, config::OpenAIConfig, types::chat::CreateChatCompletionRequest};
 use anyhow::Result;
+use rmcp::model::PromptMessage;
 use serde_json::{Value, json};
 
 pub struct AgentKernel {
@@ -38,5 +39,12 @@ impl AgentKernel {
     pub async fn run(&mut self, goal: String) -> Result<()> {
         self.state.status = ExecutionStatus::Planning;
         Ok(())
+    }
+
+    fn plan(&mut self) -> Vec<PlanStep> {
+        let mut plan = Vec::new();
+        // let mess = PromptMessage::new(role, content)
+
+        plan
     }
 }

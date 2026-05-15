@@ -3,10 +3,9 @@ use serde_json::{Value};
 
 pub struct PlanStep {
     pub id: String,
-    pub server: Option<String>,
-    pub tool: Option<String>,
-    pub input_mapping: InputResolver,
-    pub output_mapping: OutputTarget,
+    pub action: StepActions,
+    pub input: InputResolver,
+    pub output: OutputTarget,
     pub waitting: bool,
     pub re_plan: bool,
 }
@@ -26,4 +25,13 @@ pub enum OutputTarget{
 pub struct ContextKey {
     pub from: String,
     pub to: String,
+}
+
+pub enum StepActions {
+    ToolCall {
+        server: String,
+        tool: String,
+    },
+    Reasoning,
+    HumanApproval,
 }
