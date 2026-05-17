@@ -60,7 +60,7 @@ impl AgentKernel {
     //     response
     // }
 
-    async fn plan(&mut self, goal: String) -> Result<CreateChatCompletionResponse> {
+    async fn plan(&mut self, goal: String) -> Result<Vec<PlanStep>> {
         let system_prompt = PromptBuilder::new().await.build_system_prompt();
         let user_prompt = ChatCompletionRequestUserMessageArgs::default().content(goal).build().unwrap();
         let request = CreateChatCompletionRequest {
@@ -71,7 +71,7 @@ impl AgentKernel {
             model: "openai/gpt-4o-mini".to_string(),
             ..Default::default()
         };
-        let response = match self.planner.chat().create(request).await {
+        let response = match self.planner.chat().create_byot::<CreateChatCompletionRequest, Vec<PlanStep>>(request).await {
             Ok(res) => {
                 println!("Plan generated successfully: {:#?}", res);
                 res   
@@ -91,8 +91,22 @@ mod test {
         use super::*;
         dotenv::from_path("../.env").ok();
         let mut kernel = AgentKernel::default();
-        let goal = "Learn Rust programming language".to_string();
+        let goal = "Testing: Learn Rust programming language".to_string();
         let plan = kernel.plan(goal).await;
-        println!("{:#?}", plan);
+        match plan {
+            Ok(steps) => {
+                println!("Plan generated successfully:");
+                for (i, step) in steps.iter().enumerate() {
+                    println!("\n\n===============================");
+                    println!("\t\tStep {}: {:#?}", i + 1, step);
+                    println!("===============================\n\n");
+                }
+                println!("Total steps: {}", steps.len());
+                println!("Plan generation test completed successfully!!!!");
+            },
+            Err(e) => {
+                println!("Error generating plan: {}", e);
+            }
+        }
     }
 }
