@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{ExecutionState, ExecutionStatus, McpClient, PlanStep, PromptBuilder, ServerConfig};
-use async_openai::{Client, config::OpenAIConfig, types::chat::{ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequest, CreateChatCompletionResponse}};
+use async_openai::{Client, config::OpenAIConfig, types::{self, chat::{ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequest, CreateChatCompletionResponse}}};
 use anyhow::Result;
 
 pub struct AgentKernel {
@@ -69,6 +69,7 @@ impl AgentKernel {
                 ChatCompletionRequestMessage::User(user_prompt),
             ],
             model: "openai/gpt-4o-mini".to_string(),
+            response_format: Some(types::chat::ResponseFormat::JsonObject),
             ..Default::default()
         };
         let response = match self.planner.chat().create_byot::<CreateChatCompletionRequest, Vec<PlanStep>>(request).await {
