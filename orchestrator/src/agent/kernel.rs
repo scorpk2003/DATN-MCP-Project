@@ -61,7 +61,7 @@ impl AgentKernel {
     // }
 
     async fn plan(&mut self, goal: String) -> Result<Vec<PlanStep>> {
-        let system_prompt = PromptBuilder::new().await.build_system_prompt();
+        let system_prompt = PromptBuilder::new().await.build_system_test_prompt().await;
         let user_prompt = ChatCompletionRequestUserMessageArgs::default().content(goal).build().unwrap();
         let request = CreateChatCompletionRequest {
             messages: vec![
@@ -72,14 +72,27 @@ impl AgentKernel {
             response_format: Some(types::chat::ResponseFormat::JsonObject),
             ..Default::default()
         };
-        let response = match self.planner.chat().create_byot::<CreateChatCompletionRequest, Vec<PlanStep>>(request).await {
+        let response_content = match self.planner.chat().create(request).await {
             Ok(res) => {
-                println!("Plan generated successfully: {:#?}", res);
-                res   
+                println!("\t\tPlan generated successfully: \n{:#?}\n\n", res);
+                res
             },
             Err(e) => {
                 println!("Failed to generate plan: {}", e);
                 return Err(anyhow::anyhow!("Failed to generate plan: {}", e));
+            }
+        };
+        let content = response_content
+            .choices
+            .first()
+            .and_then(|c| c.message.content.as_ref())
+            .ok_or_else(|| anyhow::anyhow!("No content in planner response"))?;
+        let step: serde_json::Value = serde_json::from_str(content).map_err(|f| anyhow::anyhow!("Failed to parse plan response: {}", f))?;
+        let response = match step.get("steps") {
+            Some(steps) => serde_json::from_value(steps.clone()).map_err(|f| anyhow::anyhow!("Failed to parse steps: {}", f))?,
+            None => {
+                println!("No steps found in planner response: {}", content);
+                Vec::new()
             }
         };
         Ok(response)
@@ -106,7 +119,7 @@ mod test {
                 println!("Plan generation test completed successfully!!!!");
             },
             Err(e) => {
-                println!("Error generating plan: {}", e);
+                println!("\n\t\tError generating plan!!!! \n{}", e);
             }
         }
     }

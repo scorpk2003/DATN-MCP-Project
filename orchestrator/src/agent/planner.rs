@@ -12,16 +12,18 @@ pub struct PlanStep {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(tag = "type")]
 pub enum InputResolver {
-    Context(Vec<ContextKey>),
+    Context{ keys: Vec<ContextKey> },
     LlmResolved,
-    Static(Value),
+    Static { value: Value },
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(tag = "type")]
 pub enum OutputTarget{
-    Field(String),
-    Scratchpad(String),
+    Field{ name: String },
+    Scratchpad{ name: String },
     FieldAndScratchpad { field: String, scratchpad: String },
 }
 
@@ -32,6 +34,7 @@ pub struct ContextKey {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(tag = "type")]
 pub enum StepActions {
     ToolCall {
         server: String,
