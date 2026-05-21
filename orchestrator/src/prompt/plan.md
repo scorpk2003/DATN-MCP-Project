@@ -62,16 +62,15 @@ You will Planning Flow following each step below:
 
 ## Ouput Format
 The value that you return will use for Rust Programming Language, unless planning exactly the program will break.
-- Plan Step Rust Schema:
-```
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct PlanStep {
-    pub id: String,
-    pub action: StepActions,
-    pub input: InputResolver,
-    pub output: OutputTarget,
-    pub waitting: bool,
-    pub re_plan: bool,
+- Plan Step Json Schema:
+```json
+{
+  "id": "Step ID by String",
+  "action": "StepActions describe above",
+  "input": "InputResolver describe above",
+  "output": "OutputTarget describe above",
+  "waitting": "Need confirmed from user? (default false)",
+  "re_plan": "Need re-plan if step fail? (default false)"
 }
 ```
 

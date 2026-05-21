@@ -11,6 +11,10 @@ pub struct PlanStep {
     pub re_plan: bool,
 }
 
+impl PlanStep {
+    // pub fn calling_tool()
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(tag = "type")]
 pub enum InputResolver {

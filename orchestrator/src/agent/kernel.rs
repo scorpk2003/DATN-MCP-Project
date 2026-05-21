@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::{ExecutionState, ExecutionStatus, McpClient, PlanStep, PromptBuilder, ServerConfig};
 use async_openai::{Client, config::OpenAIConfig, types::{self, chat::{ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequest, CreateChatCompletionResponse}}};
 use anyhow::Result;
+use tracing::info;
 
 pub struct AgentKernel {
     pub planner: Client<OpenAIConfig>,
@@ -41,24 +42,26 @@ impl AgentKernel {
         Ok(Self { clients, planner, executor, state })
     }
     pub async fn run(&mut self, goal: String) -> Result<()> {
+
         self.state.status = ExecutionStatus::Planning;
+
+        // Planning
+        info!("Planning started!!!");
+        self.state.plan = self.plan(goal).await?;
+        info!("Planning completed!!!");
+
+        // Execution
+        while self.state.current_step < self.state.plan.len() {
+            let step = &self.state.plan[self.state.current_step].clone();
+
+            if step.waitting {
+                // Suspend here
+            }
+        }
+
+        info!("Done!!!");
         Ok(())
     }
-
-    // async fn plan(&mut self, goal: String) -> Vec<PlanStep> {
-    //     let system_prompt = PromptBuilder::new().await.build_system_prompt();
-    //     let user_prompt = ChatCompletionRequestUserMessageArgs::default().content(goal).build().unwrap();
-    //     let request = CreateChatCompletionRequest {
-    //         messages: vec![
-    //             ChatCompletionRequestMessage::System(system_prompt),
-    //             ChatCompletionRequestMessage::User(user_prompt),
-    //         ],
-    //         model: "gpt-4o-mini".to_string(),
-    //         ..Default::default()
-    //     };
-    //     let response = self.planner.chat().create_byot::<CreateChatCompletionRequest, Vec<PlanStep>>(request).await.unwrap();
-    //     response
-    // }
 
     async fn plan(&mut self, goal: String) -> Result<Vec<PlanStep>> {
         let system_prompt = PromptBuilder::new().await.build_system_test_prompt().await;
@@ -68,7 +71,7 @@ impl AgentKernel {
                 ChatCompletionRequestMessage::System(system_prompt),
                 ChatCompletionRequestMessage::User(user_prompt),
             ],
-            model: "openai/gpt-4o-mini".to_string(),
+            model: "openai/gpt-oss-120b:free".to_string(),
             response_format: Some(types::chat::ResponseFormat::JsonObject),
             ..Default::default()
         };
@@ -97,6 +100,10 @@ impl AgentKernel {
         };
         Ok(response)
     }
+
+    // async fn execute_step(&mut self, step: &PlanStep) -> Result<String> {
+
+    // }
 }
 
 mod test {
@@ -105,7 +112,7 @@ mod test {
         use super::*;
         dotenv::from_path("../.env").ok();
         let mut kernel = AgentKernel::default();
-        let goal = "Testing: Learn Rust programming language".to_string();
+        let goal = "Testing: Learn Java programming language".to_string();
         let plan = kernel.plan(goal).await;
         match plan {
             Ok(steps) => {
