@@ -4,7 +4,9 @@ pub mod executor;
 pub mod context;
 pub mod capability;
 pub mod prompt;
+pub mod binding;
 
+pub use binding::*;
 pub use kernel::*;
 pub use planner::*;
 pub use executor::*;

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{ExecutionState, ExecutionStatus, McpClient, PlanStep, PromptBuilder, ServerConfig};
-use async_openai::{Client, config::OpenAIConfig, types::{self, chat::{ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequest, CreateChatCompletionResponse}}};
+use async_openai::{Client, config::OpenAIConfig, types::{self, chat::{ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequest}}};
 use anyhow::Result;
 use tracing::info;
 
@@ -47,7 +47,7 @@ impl AgentKernel {
 
         // Planning Phase
         info!("Planning started!!!");
-        self.state.plan = self.plan(goal).await?;
+        (self.state.plan, self.state.context.goal) = self.plan(goal).await?;
         info!("Planning completed!!!");
 
         // Execution
@@ -65,8 +65,15 @@ impl AgentKernel {
         Ok(())
     }
 
-    async fn plan(&mut self, goal: String) -> Result<Vec<PlanStep>> {
-        let system_prompt = PromptBuilder::new().await.build_system_test_prompt().await;
+    async fn plan(&mut self, goal: String) -> Result<(Vec<PlanStep>, Option<String>)> {
+
+        // Build system prompt
+        let mut prompt_build = PromptBuilder::new().await;
+        prompt_build.build_planning_phase().await;
+        prompt_build.build_testing_phase().await;
+        let system_prompt = prompt_build.build_system_prompt();
+
+        // Build user prompt
         let user_prompt = ChatCompletionRequestUserMessageArgs::default().content(goal).build().unwrap();
         let request = CreateChatCompletionRequest {
             messages: vec![
@@ -77,6 +84,8 @@ impl AgentKernel {
             response_format: Some(types::chat::ResponseFormat::JsonObject),
             ..Default::default()
         };
+
+        // Planning
         let response_content = match self.planner.chat().create(request).await {
             Ok(res) => {
                 println!("\t\tPlan generated successfully: \n{:#?}\n\n", res);
@@ -93,6 +102,8 @@ impl AgentKernel {
             .and_then(|c| c.message.content.as_ref())
             .ok_or_else(|| anyhow::anyhow!("No content in planner response"))?;
         let step: serde_json::Value = serde_json::from_str(content).map_err(|f| anyhow::anyhow!("Failed to parse plan response: {}", f))?;
+        
+        // Parsing
         let response = match step.get("steps") {
             Some(steps) => serde_json::from_value(steps.clone()).map_err(|f| anyhow::anyhow!("Failed to parse steps: {}", f))?,
             None => {
@@ -100,7 +111,15 @@ impl AgentKernel {
                 Vec::new()
             }
         };
-        Ok(response)
+        let step_goal = match step.get("goal") {
+            Some(goals) => serde_json::from_value::<String>(goals.clone()).map_err(|f| anyhow::anyhow!("Failed to parse step goals: {}", f))?,
+            None => {
+                println!("No step goals found in planner response: {}", content);
+                String::new()
+            }
+        };
+
+        Ok((response, Some(step_goal)))
     }
 
     // async fn execute_step(&mut self, step: &PlanStep) -> Result<String> {
@@ -114,22 +133,11 @@ mod test {
         use super::*;
         dotenv::from_path("../.env").ok();
         let mut kernel = AgentKernel::default();
-        let goal = "Testing: Learn Java programming language".to_string();
-        let plan = kernel.plan(goal).await;
-        match plan {
-            Ok(steps) => {
-                println!("Plan generated successfully:");
-                for (i, step) in steps.iter().enumerate() {
-                    println!("\n\n===============================");
-                    println!("\t\tStep {}: {:#?}", i + 1, step);
-                    println!("===============================\n\n");
-                }
-                println!("Total steps: {}", steps.len());
-                println!("Plan generation test completed successfully!!!!");
-            },
-            Err(e) => {
-                println!("\n\t\tError generating plan!!!! \n{}", e);
-            }
+        let goal = "Testing: Learn C# programming language".to_string();
+        let (plan, step_goal) = kernel.plan(goal).await.unwrap();
+        for (idx, step) in plan.iter().enumerate() {
+            println!("Step {}: {:?}", idx + 1, step);
         }
+        println!("Step Goal: {:?}", step_goal);
     }
 }
