@@ -45,7 +45,7 @@ impl AgentKernel {
 
         self.state.status = ExecutionStatus::Planning;
 
-        // Planning
+        // Planning Phase
         info!("Planning started!!!");
         self.state.plan = self.plan(goal).await?;
         info!("Planning completed!!!");
@@ -57,6 +57,8 @@ impl AgentKernel {
             if step.waitting {
                 // Suspend here
             }
+
+            // Resolver Phase
         }
 
         info!("Done!!!");
