@@ -45,7 +45,7 @@ You will Planning Flow following each step below:
 2. Action planning: Now you know relations of input-output, you will planning action(```StepActions```) need for execute.
 3. Step Format: You will know Plan Step Schema in Output Format above and complete Plan for Step.
 4. Recursive: After step 3. your plan is complete for one step, continous from step 1. when your plan will satified with user goal(if executed).
-5. Parallelism: Serialize step id for multi-step that will execute parallelism following ".*"(Ex: step 3 have two step parallelism ["step 3.1", "step 3.2"]).
+5. Parallelism: Serialize step id for multi-step that will execute parallelism following ".*"(Ex: step 3 have two step parallelism ["step 3.1", "step 3.2"]). In case of testing, don't contain paralelism step.
 6. Return raw Json is a list Plan Step doesn't contain markdown or anything and main context is a goal of flow.
 
 ## Ouput Format

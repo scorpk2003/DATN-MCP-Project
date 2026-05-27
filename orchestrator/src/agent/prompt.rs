@@ -83,6 +83,7 @@ impl PromptBuilder {
         match is_test {
             true => {
                 let test = fs::read_to_string("src/prompt/test.md").await.expect("Fail to load Test file for Binding Phase");
+                failure_phase_rules.push_str(test.as_str());
                 self.phasing = Some(Phase::Testing);
             },
             false => {

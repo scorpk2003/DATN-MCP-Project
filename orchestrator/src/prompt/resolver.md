@@ -1,14 +1,14 @@
-# Resolver Strategy
+# Binding Strategy
 
 ## Phase Goal
-- You will build input/output resolver for each step before execute program. Your goal is ensure that program can using tools exactly and clarify HOW data flow in step.
+- You will build input resolver - output target for step before executing. Your goal is to generate executable runtime bindings between available context and step execution..
 
 ## Input Resolver Format
 - Step-Input: Enum that keep context during flow.
 ```json
 // Context: Build params from main context
 {"type": "Context", "keys": [{
-    "from": "field_name",
+    "from": "context_path",
     "to": "param_name"
 }]}
 
@@ -32,4 +32,45 @@
 {"type": "FieldAndScratchpad", "field": "field_name", "scratchpad": "scratchpad_name"}
 ```
 
+## Strategy Flow
+1. 
+
 ## Ouput Format
+- Return raw Json following this format:
+```json
+{
+    "binding": {
+        "step_id": "id_or_name_of_current_step",
+        "input": "input_resolver",
+        "output": "output_target",
+    }
+}
+```
+
+## Example
+- Prompt:
+```
+Use tool: extrac_topic from server: Roadmap Server for step: step 03. With Dependencies: step 02 {...}.
+```
+-> Return:
+```json
+{
+    "binding": {
+        "step_id": "step 03",
+        "input": {
+            "type": "Context",
+            "keys": [{
+                "from": "extract_topic",
+                "to": "goal"
+            }]
+        },
+        "output": {
+            "type": "Field",
+            "name": "roadmap",
+            "schema": {
+                "topic": "array"
+            }
+        }
+    }
+}
+```

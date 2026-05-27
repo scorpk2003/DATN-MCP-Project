@@ -28,7 +28,7 @@ impl Default for AgentContext {
     }
 }
 impl AgentContext {
-    pub fn write_obs(&mut self, step_id: usize, obs: &Value) {
+    pub fn write_obs(&mut self, step_id: String, obs: &Value) {
         self.scratchpad.insert("last_obs".into(), obs.clone());
         self.scratchpad.insert(format!("debug:step_{step_id}"), obs.clone());
     }
