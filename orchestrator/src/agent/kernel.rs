@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ExecutionState, ExecutionStatus, McpClient, PlanStep, PromptBuilder, ServerConfig};
+use crate::{EvaluationStep, ExecutionState, ExecutionStatus, McpClient, PlanStep, PromptBuilder, ServerConfig};
 use async_openai::{Client, config::OpenAIConfig, types::{self, chat::{ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequest}}};
 use anyhow::Result;
 use tracing::info;
@@ -10,6 +10,7 @@ pub struct AgentKernel {
     pub executor: Client<OpenAIConfig>,
     pub clients: HashMap<String, McpClient>,
     pub state: ExecutionState,
+    pub evaluation: Vec<EvaluationStep>,
 }
 
 impl Default for AgentKernel {
@@ -25,6 +26,7 @@ impl Default for AgentKernel {
             executor,
             clients: HashMap::new(),
             state: ExecutionState::default(),
+            evaluation: Vec::new()
         }
     }
 }
@@ -39,7 +41,8 @@ impl AgentKernel {
         let planner = Client::new();
         let executor = Client::new();
         let state = ExecutionState::default();
-        Ok(Self { clients, planner, executor, state })
+        let evaluation = Vec::new();
+        Ok(Self { clients, planner, executor, state, evaluation })
     }
     pub async fn run(&mut self, goal: String) -> Result<()> {
 
@@ -52,13 +55,13 @@ impl AgentKernel {
 
         // Execution
         while self.state.current_step < self.state.plan.len() {
-            let step = &self.state.plan[self.state.current_step].clone();
+            let step: &PlanStep = &self.state.plan[self.state.current_step].clone();
 
-            if step.waitting {
-                // Suspend here
-            }
+            // Binding Phase
 
-            // Resolver Phase
+            // Execute Phase
+            self.state.status = ExecutionStatus::Running;
+            let step_result = self.execute_step(step).await?;
         }
 
         info!("Done!!!");
@@ -69,8 +72,7 @@ impl AgentKernel {
 
         // Build system prompt
         let mut prompt_build = PromptBuilder::new().await;
-        prompt_build.build_planning_phase().await;
-        prompt_build.build_testing_phase().await;
+        prompt_build.build_planning_phase(true).await;
         let system_prompt = prompt_build.build_system_prompt();
 
         // Build user prompt
@@ -122,9 +124,9 @@ impl AgentKernel {
         Ok((response, Some(step_goal)))
     }
 
-    // async fn execute_step(&mut self, step: &PlanStep) -> Result<String> {
-
-    // }
+    async fn execute_step(&mut self, step: &PlanStep) -> Result<String> {
+        Ok(String::new())
+    }
 }
 
 mod test {

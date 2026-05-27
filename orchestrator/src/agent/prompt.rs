@@ -48,29 +48,48 @@ impl PromptBuilder {
         message
     }
 
-    pub async fn build_planning_phase(&mut self) {
-        let planning_phase_rules = fs::read_to_string("src/prompt/plan.md").await.expect("Failed to load Planning Phase Prompt");
+    pub async fn build_planning_phase(&mut self, is_test: bool) {
+        let mut planning_phase_rules = fs::read_to_string("src/prompt/plan.md").await.expect("Failed to load Planning Phase Prompt");
+        match is_test {
+            true => {
+                let test = fs::read_to_string("src/prompt/test.md").await.expect("Fail to load Test file for Planning Phase");
+                planning_phase_rules.push_str(test.as_str());
+                self.phasing = Some(Phase::Testing);
+            },
+            false => {
+                self.phasing = Some(Phase::Planning);
+            }
+        }
         self.phase_rules = Some(planning_phase_rules);
-        self.phasing = Some(Phase::Planning);
     }
     
-    pub async fn build_binding_phase(&mut self) {
-        let binding_phase_rules = fs::read_to_string("src/prompt/resolver.md").await.expect("Failed to load Binding Phase Prompt");
+    pub async fn build_binding_phase(&mut self, is_test: bool) {
+        let mut binding_phase_rules = fs::read_to_string("src/prompt/resolver.md").await.expect("Failed to load Binding Phase Prompt");
+        match is_test {
+            true => {
+                let test = fs::read_to_string("src/prompt/test.md").await.expect("Fail to load Test file for Binding Phase");
+                binding_phase_rules.push_str(test.as_str());
+                self.phasing = Some(Phase::Testing)
+            },
+            false => {
+                self.phasing = Some(Phase::Binding);
+            }
+        }
         self.phase_rules = Some(binding_phase_rules);
-        self.phasing = Some(Phase::Binding);
     }
 
-    pub async fn build_failure_phase(&mut self) {
-        let failure_phase_rules = fs::read_to_string("src/prompt/failure.md").await.expect("Failed to load Failure Phase Prompt");
+    pub async fn build_failure_phase(&mut self, is_test: bool) {
+        let mut failure_phase_rules = fs::read_to_string("src/prompt/failure.md").await.expect("Failed to load Failure Phase Prompt");
+        match is_test {
+            true => {
+                let test = fs::read_to_string("src/prompt/test.md").await.expect("Fail to load Test file for Binding Phase");
+                self.phasing = Some(Phase::Testing);
+            },
+            false => {
+                self.phasing = Some(Phase::Failure);
+            }
+        }
         self.phase_rules = Some(failure_phase_rules);
-        self.phasing = Some(Phase::Failure);
-    }
-
-    pub async fn build_testing_phase(&mut self) {
-        let testing_phase_rules = fs::read_to_string("src/prompt/test.md").await.expect("Failed to load Testing Phase Prompt");
-        let testing_phase = self.phase_rules.clone().unwrap_or_default() + "\n\n" + &testing_phase_rules;
-        self.phase_rules = Some(testing_phase);
-        self.phasing = Some(Phase::Testing);
     }
 
 }
@@ -89,7 +108,7 @@ mod test {
     async fn test_build_system_prompt() {
         use super::*;
         let mut prompt = PromptBuilder::new().await;
-        prompt.build_planning_phase().await;
+        prompt.build_planning_phase(false).await;
         let system_prompt = prompt.build_system_prompt();
         println!("{:?}", system_prompt);
     }

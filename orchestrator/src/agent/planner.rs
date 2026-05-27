@@ -4,8 +4,7 @@ use serde::{Deserialize, Serialize};
 pub struct PlanStep {
     pub id: String,
     pub action: StepActions,
-    pub waitting: bool,
-    pub re_plan: bool,
+    pub dependencies: Vec<String>,
 }
 
 impl PlanStep {
