@@ -1,6 +1,8 @@
-use async_openai::{Client, config::OpenAIConfig};
+use anyhow::{Result, anyhow};
+use async_openai::{Client, config::OpenAIConfig, types::chat::{ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequest, ResponseFormat::JsonObject}};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tracing::info;
 
 use crate::{AgentContext, PlanStep, PromptBuilder, StepActions};
 
@@ -10,6 +12,7 @@ pub struct StepBinding {
     pub step_id: String,
     pub input: InputResolver,
     pub output: OutputTarget,
+    pub expected_schema: Option<Value>,
 }
 
 impl Default for InputResolver {
@@ -29,7 +32,7 @@ impl Default for StepBinding {
         let step_id = String::from("default");
         let input = InputResolver::default();
         let output = OutputTarget::default();
-        Self { step_id, input, output }
+        Self { step_id, input, output, expected_schema: None }
     }
 }
 
@@ -39,11 +42,11 @@ impl StepBinding {
         step: &PlanStep,
         execution: &Client<OpenAIConfig>,
         context: &AgentContext,
-    )
+    ) -> Result<Self>
     {
         // Build system prompt for binding phase
         let mut prompt_build = PromptBuilder::new().await;
-        prompt_build.build_binding_phase(true).await;
+        prompt_build.build_binding_phase(true).await; // === Testing On  ===
         let system_prompt = prompt_build.build_system_prompt();
 
         // Get Dependencies and last observation
@@ -59,11 +62,51 @@ impl StepBinding {
 
         let obs = format!("Last Observation: {last_obs}\n\n{dept_val}");
 
-        match &step.action {
-            StepActions::ToolCall { server, tool } => {},
-            StepActions::Reasoning => {},
-            StepActions::HumanApproval => {},
-        }
+        let mut binding_prompt = match &step.action {
+            StepActions::ToolCall { server, tool } => {
+                let step_goal = step.step_goal.clone().and_then(|f| Some(format!("step goal: {f}"))).unwrap();
+                format!("Use tool: {tool} in server: {server} for this step: {:?}\n{step_goal}", step.id.clone())
+            },
+            StepActions::Reasoning => {
+                format!("Response to user")
+            },
+            StepActions::HumanApproval => {
+                format!("Need User approval")
+            },
+        };
+        binding_prompt.push_str(obs.as_str());
+
+        let prompt = ChatCompletionRequestUserMessageArgs::default().content(binding_prompt).build().unwrap();
+        let request = CreateChatCompletionRequest {
+            messages: vec![
+                ChatCompletionRequestMessage::System(system_prompt),
+                ChatCompletionRequestMessage::User(prompt),
+            ],
+            model: "openai/gpt-oss-20b:free".to_string(),
+            response_format: Some(JsonObject),
+            ..Default::default()
+        };
+
+        let response = match execution.chat().create(request).await {
+            Ok(res) => {
+                info!("Generate Binding success!!!\n\tBind:{:?}", res);
+                println!("Generate Binding success!!!\n\t{:?}", res);
+                res
+            },
+            Err(e) => {
+                info!("Binding Generation failed!!!\n\tfail: {:?}", e);
+                println!("Binding Generation failed!!!\n\tfail: {:?}", e);
+                return Err(e.into());
+            }
+        };
+        let content = response
+            .choices
+            .first()
+            .and_then(|c| c.message.content.as_deref())
+            .ok_or_else(|| anyhow!("No content in binding response"))?;
+
+        let mut binding = StepBinding::default();
+        Ok(binding)
     }
 }
 

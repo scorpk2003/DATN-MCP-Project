@@ -8,6 +8,7 @@ pub struct AgentContext {
     pub skill_graph: Option<Value>,
     pub lesson: Option<Value>,
     pub quizz: Option<Value>,
+    pub user: Option<Value>,
     pub user_confirmed: bool,
     pub scratchpad: Map<String, Value>,
 }
@@ -22,6 +23,7 @@ impl Default for AgentContext {
             skill_graph: None,
             lesson: None,
             quizz: None,
+            user: None,
             user_confirmed: false,
             scratchpad: Map::new(),
         }

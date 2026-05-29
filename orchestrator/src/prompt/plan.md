@@ -35,6 +35,7 @@
 {
   "id": "Serial of step",
   "action": "StepActions describe above",
+  "step_goal": "Goal for step that execute complicated cause break data flow",
   "dependencies": ["List of step that current step depends on(context of parallelism execution if exist)"],
 }
 ```
@@ -44,6 +45,7 @@ You will Planning Flow following each step below:
 1. Server Connect: You knew about all MCP server and tools exist, all of that server in state of lazy connect so you will decide which server willing connect.
 2. Action planning: Now you know relations of input-output, you will planning action(```StepActions```) need for execute.
 3. Step Format: You will know Plan Step Schema in Output Format above and complete Plan for Step.
+  - Step Goal Attention: Just generate step goal if step will have ambigous input/output. Example: step 02 have action {Tool Call}, output expected list topics sort following ranking(topic have user completed most) -> data flow break because input(big/many Object) and output(schema expected) cause ambigous at runtime, Llm will resolve but need instruction, step goal will responsibility for that.
 4. Recursive: After step 3. your plan is complete for one step, continous from step 1. when your plan will satified with user goal(if executed).
 5. Parallelism: Serialize step id for multi-step that will execute parallelism following ".*"(Ex: step 3 have two step parallelism ["step 3.1", "step 3.2"]). In case of testing, don't contain paralelism step.
 6. Return raw Json is a list Plan Step doesn't contain markdown or anything and main context is a goal of flow.
@@ -74,6 +76,7 @@ The value that you return will use for Rust Programming Language, unless plannin
     {
       "id": "step 1",
       "action": {"type": "ToolCall", "server": "Roadmap Server", "tool": "generate_roadmap"},
+      "step_goal": "",
       "dependencies": [""]
     },
     {

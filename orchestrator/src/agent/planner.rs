@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub struct PlanStep {
     pub id: String,
     pub action: StepActions,
+    pub step_goal: Option<String>,
     pub dependencies: Vec<String>,
 }
 

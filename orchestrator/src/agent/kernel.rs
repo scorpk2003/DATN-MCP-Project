@@ -91,10 +91,12 @@ impl AgentKernel {
         let response_content = match self.planner.chat().create(request).await {
             Ok(res) => {
                 println!("\t\tPlan generated successfully: \n{:#?}\n\n", res);
+                info!("\t\tPlan generated successfully: \n{:#?}\n\n", res);
                 res
             },
             Err(e) => {
                 println!("Failed to generate plan: {}", e);
+                info!("Failed to generate plan: {}", e);
                 return Err(anyhow::anyhow!("Failed to generate plan: {}", e));
             }
         };
