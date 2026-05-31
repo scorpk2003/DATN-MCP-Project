@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tracing::info;
 
-use crate::{AgentContext, PlanStep, PromptBuilder, StepActions};
+use crate::{AGENT_TESTING, AgentContext, McpClient, PlanStep, PromptBuilder, StepActions};
 
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -38,15 +38,15 @@ impl Default for StepBinding {
 
 impl StepBinding {
     pub async fn resolve_binding(
-        &mut self,
         step: &PlanStep,
         execution: &Client<OpenAIConfig>,
         context: &AgentContext,
+        clients: &Vec<McpClient>
     ) -> Result<Self>
     {
         // Build system prompt for binding phase
-        let mut prompt_build = PromptBuilder::new().await;
-        prompt_build.build_binding_phase(true).await; // === Testing On  ===
+        let mut prompt_build = PromptBuilder::new(clients).await;
+        prompt_build.build_binding_phase(AGENT_TESTING).await;
         let system_prompt = prompt_build.build_system_prompt();
 
         // Get Dependencies and last observation
@@ -104,9 +104,27 @@ impl StepBinding {
             .first()
             .and_then(|c| c.message.content.as_deref())
             .ok_or_else(|| anyhow!("No content in binding response"))?;
+        let content = serde_json::from_str::<Value>(content).expect("Convert to value fail!!!");
 
-        let mut binding = StepBinding::default();
+        let input = content.get("input").expect("Input no exist in binding response");
+        let output = content.get("output").expect("Output no exist in binding response");
+        let expected_schema = content.get("expected_schema").expect("Expected schema no exist in binding response");
+
+        let input = serde_json::from_value::<InputResolver>(input.clone()).expect("Failed to parse input resolver");
+        let output = serde_json::from_value::<OutputTarget>(output.clone()).expect("Failed to parse output target");
+        let expected_schema = Some(expected_schema.clone());
+
+        let binding = StepBinding { step_id: step.id.clone(), input, output, expected_schema };
         Ok(binding)
+    }
+
+    pub fn resolve_params(&mut self, context: &AgentContext) -> Result<Value> {
+        match &self.input {
+            InputResolver::Context { keys } => {},
+            InputResolver::LlmResolved { instruction, context_keys } => {},
+            InputResolver::Static { value } => {},
+        }
+        Ok(Value::Null)
     }
 }
 
@@ -130,4 +148,9 @@ pub enum OutputTarget{
 pub struct ContextKey {
     pub from: String,
     pub to: String,
+}
+impl ContextKey {
+    pub fn extract_key(&self) {
+        let split_key = self.from.split(".").collect::<Vec<_>>();
+    }
 }

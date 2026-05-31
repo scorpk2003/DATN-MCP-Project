@@ -15,6 +15,8 @@ pub use api::*;
 pub use agent::*;
 pub use mcp::*;
 
+const AGENT_TESTING: bool = true;
+
 fn init_tracing(level: &str) {
     let filter = match EnvFilter::try_new(level) {
         Ok(filter) => filter,

@@ -2,6 +2,8 @@ use async_openai::types::chat::{ChatCompletionRequestSystemMessage,
     ChatCompletionRequestSystemMessageArgs};
 use tokio::fs;
 
+use crate::McpClient;
+
 
 pub struct PromptBuilder {
     pub identity: String,
@@ -19,9 +21,9 @@ pub enum Phase {
 }
 
 impl PromptBuilder {
-    pub async fn new() -> Self {
+    pub async fn new(clients: &Vec<McpClient>) -> Self {
         let identity = fs::read_to_string("src/prompt/agent.md").await.expect("Failed to load Agent Prompt");
-        let tool_rules = String::from("");
+        let tool_rules = clients.iter().map(|client| client.tool_description()).collect::<Vec<_>>().join("\n\n");
         let phase_rules = None;
         Self { identity, tool_rules, phase_rules, phasing: None }
     }
@@ -96,10 +98,14 @@ impl PromptBuilder {
 }
 
 mod test {
+    #[allow(unused)]
+    use crate::{AgentKernel, kernel};
+
     #[tokio::test]
     async fn test_constructor() {
         use super::*;
-        let prompt = PromptBuilder::new().await;
+        let kernel = AgentKernel::default();
+        let prompt = PromptBuilder::new(&kernel.clients).await;
         println!("{}", prompt.identity);
         println!("{}", prompt.tool_rules);
         println!("{}", prompt.phase_rules.unwrap_or_default());
@@ -108,7 +114,8 @@ mod test {
     #[tokio::test]
     async fn test_build_system_prompt() {
         use super::*;
-        let mut prompt = PromptBuilder::new().await;
+        let kernel = AgentKernel::default();
+        let mut prompt = PromptBuilder::new(&kernel.clients).await;
         prompt.build_planning_phase(false).await;
         let system_prompt = prompt.build_system_prompt();
         println!("{:?}", system_prompt);

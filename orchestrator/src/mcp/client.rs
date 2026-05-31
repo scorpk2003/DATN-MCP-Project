@@ -46,4 +46,12 @@ impl McpClient {
 
         Ok(serde_json::to_value(result.content)?)
     }
+
+    pub fn tool_description(&self) -> String {
+        self.tools.iter().map(|tool| {
+            format!("\n\tTool Name: {},\n\tTool Description: {},\n\tInput Schema: {:?}, Output Schema: {:?}",
+                tool.name.clone(), tool.description.clone().unwrap(), tool.input_schema, tool.output_schema
+            )
+        }).collect::<Vec<String>>().join(format!("\nAll Tool Above Exist in Server: {}", self.server_name.clone()).as_str())
+    }
 }
