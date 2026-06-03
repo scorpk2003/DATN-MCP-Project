@@ -4,7 +4,7 @@ use tokio::fs;
 
 use crate::McpClient;
 
-
+#[derive(Debug, Clone)]
 pub struct PromptBuilder {
     pub identity: String,
     pub tool_rules: String,
@@ -12,6 +12,7 @@ pub struct PromptBuilder {
     pub phasing: Option<Phase>,
 }
 
+#[derive(Debug, Clone)]
 pub enum Phase {
     Planning,
     Binding,
@@ -23,7 +24,7 @@ pub enum Phase {
 impl PromptBuilder {
     pub async fn new(clients: &Vec<McpClient>) -> Self {
         let identity = fs::read_to_string("src/prompt/agent.md").await.expect("Failed to load Agent Prompt");
-        let tool_rules = clients.iter().map(|client| client.tool_description()).collect::<Vec<_>>().join("\n\n");
+        let tool_rules = clients.iter().map(|client| client.build_tool_prompt().join("\n")).collect::<Vec<_>>().join("\n\n");
         let phase_rules = None;
         Self { identity, tool_rules, phase_rules, phasing: None }
     }

@@ -48,17 +48,20 @@ impl AgentKernel {
 
         self.state.status = ExecutionStatus::Planning;
 
+        let prompt = PromptBuilder::new(&self.clients).await;
+        
         // Planning Phase
         info!("Planning started!!!");
-        (self.state.plan, self.state.context.goal) = PlanStep::plan(goal, &self.planner, &self.clients).await?;
+        (self.state.plan, self.state.context.goal) = PlanStep::plan(goal, &self.planner, &prompt).await?;
         info!("Planning completed!!!");
+
 
         // Execution
         while self.state.current_step < self.state.plan.len() {
             let step: &PlanStep = &self.state.plan[self.state.current_step].clone();
 
             // Binding Phase
-            let binding = StepBinding::resolve_binding(step, &self.executor, &self.state.context, &self.clients).await?;
+            let binding = StepBinding::resolve_binding(step, &self.executor, &self.state.context, &prompt).await?;
             self.state.resolver.push(binding.clone());
 
             // Execute Phase

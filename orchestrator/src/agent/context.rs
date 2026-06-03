@@ -1,5 +1,7 @@
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AgentContext {
     pub session_id: String,
     pub goal: Option<String>,

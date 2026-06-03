@@ -14,10 +14,10 @@ pub struct PlanStep {
 }
 
 impl PlanStep {
-    pub async fn plan(goal: String, planner: &Client<OpenAIConfig>, clients: &Vec<McpClient>) -> Result<(Vec<Self>, Option<String>)> {
+    pub async fn plan(goal: String, planner: &Client<OpenAIConfig>, prompt: &PromptBuilder) -> Result<(Vec<Self>, Option<String>)> {
 
         // Build system prompt
-        let mut prompt_build = PromptBuilder::new(clients).await;
+        let mut prompt_build = prompt.clone();
         prompt_build.build_planning_phase(AGENT_TESTING).await;
         let system_prompt = prompt_build.build_system_prompt();
 
@@ -28,7 +28,7 @@ impl PlanStep {
                 ChatCompletionRequestMessage::System(system_prompt),
                 ChatCompletionRequestMessage::User(user_prompt),
             ],
-            model: "openai/gpt-oss-120b:free".to_string(),
+            model: "openai/gpt-4o-mini".to_string(),
             response_format: Some(types::chat::ResponseFormat::JsonObject),
             ..Default::default()
         };
@@ -92,7 +92,8 @@ mod test {
         dotenv::from_path("../.env").ok();
         let kernel = AgentKernel::default();
         let goal = "Testing: Learn C# programming language".to_string();
-        let (plan, step_goal) = PlanStep::plan(goal, &kernel.planner, &kernel.clients).await.unwrap();
+        let prompt = PromptBuilder::new(&kernel.clients).await;
+        let (plan, step_goal) = PlanStep::plan(goal, &kernel.planner, &prompt).await.unwrap();
         for (idx, step) in plan.iter().enumerate() {
             println!("Step {}: {:?}", idx + 1, step);
         }

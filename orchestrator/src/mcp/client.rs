@@ -47,6 +47,12 @@ impl McpClient {
         Ok(serde_json::to_value(result.content)?)
     }
 
+    pub fn build_tool_prompt(&self) -> Vec<String> {
+        self.tools.iter().map(|tool| {
+            format!("{}.{}: {}", self.server_name.clone(), tool.name.clone(), tool.description.clone().unwrap_or_else(|| "No description available".into()))
+        }).collect()
+    }
+
     pub fn tool_description(&self) -> String {
         self.tools.iter().map(|tool| {
             format!("\n\tTool Name: {},\n\tTool Description: {},\n\tInput Schema: {:?}, Output Schema: {:?}",

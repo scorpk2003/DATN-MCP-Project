@@ -16,6 +16,11 @@ There is some main phase you need to know:
 - Execute Phase: Execute each step in flow.
 - Failure Phase: Handle failure step when step fail.
 
+## Sub Phase
+In case of step/phase transfer happened problem that out of strategy of strategy specified you handled. Sub phase don't need a full of strategy, you will resolved sub phase by give instructions from that phase. This is a lot of sub phase usually happened:
+- Build Params: Happend at Execute phase, when Binding phase provide complicated input and can't handle with context path.
+- Response: Response result to user.
+
 ## Attention
 1. Planning: Generate Plan exact with Planning Strategy, don't hallucinate output, It can break the program.
 2. Step Failure: When step failure, re-plan and execute following Failure Strategy.
