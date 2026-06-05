@@ -66,18 +66,22 @@ impl AgentKernel {
 
             // Execute Phase
             self.state.status = ExecutionStatus::Running;
-            let step_result = self.execute_step(step, &binding).await?;
+            let step_result = self.execute_step(step, &binding, &prompt).await?;
         }
 
         info!("Done!!!");
         Ok(())
     }
 
-    async fn execute_step(&mut self, step: &PlanStep, binding: &StepBinding) -> Result<String> {
+    async fn execute_step(&mut self, step: &PlanStep, binding: &StepBinding, prompt: &PromptBuilder) -> Result<String> {
+        
+        let params = binding.resolve_params(&self.state.context, &self.executor, &prompt).await?;
+        
         match &step.action {
             StepActions::ToolCall { server, tool } => {
                 let client = self.clients.iter().find(|c| c.server_name == *server)
                     .ok_or_else(|| anyhow::anyhow!("No client found for server: {}", server))?;
+                let response = client.call_tool(tool, params).await?;
             },
             StepActions::Reasoning => {},
             StepActions::HumanApproval => {},

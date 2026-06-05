@@ -30,7 +30,7 @@ impl McpClient {
         })
     }
 
-    pub async fn call_tool(&mut self, tool_name: &str, params: Value) -> Result<Value> {
+    pub async fn call_tool(&self, tool_name: &str, params: Value) -> Result<Value> {
         let args = match params {
             Value::Object(obj) => Some(obj),
             _ => None

@@ -1,10 +1,10 @@
 use anyhow::{Result, anyhow};
 use async_openai::{Client, config::OpenAIConfig, types::chat::{ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequest, ResponseFormat::JsonObject}};
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value, json};
+use serde_json::{Map, Value};
 use tracing::info;
 
-use crate::{AGENT_TESTING, AgentContext, McpClient, PlanStep, PromptBuilder, StepActions};
+use crate::{AGENT_TESTING, AgentContext, PlanStep, PromptBuilder, StepActions};
 
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -166,6 +166,72 @@ impl StepBinding {
                 Ok(value.clone())
             },
         }
+    }
+
+    pub fn apply_output(&mut self, context: &mut AgentContext, value: &Value) -> Result<()> {
+        match &self.output {
+            OutputTarget::Field { name } => {
+                match name.as_str() {
+                    "goal" => {
+                        context.goal = Some(value.clone().as_str().unwrap_or("Goal Expected a String").to_string());
+                    },
+                    "topic" => {
+                        context.topic = Some(value.clone().as_str().unwrap_or("Topic Expected a String").to_string());
+                    },
+                    "roadmap" => {
+                        context.roadmap = Some(value.clone());
+                    },
+                    "skill_graph" => {
+                        context.skill_graph = Some(value.clone());
+                    },
+                    "lesson" => {
+                        context.lesson = Some(value.clone());
+                    },
+                    "quizz" => {
+                        context.quizz = Some(value.clone());
+                    },
+                    "user" => {
+                        context.user = Some(value.clone());
+                    },
+                    _ => {
+                        return Err(anyhow!("Invalid field name: {}", name));
+                    }
+                }
+            },
+            OutputTarget::Scratchpad { name } => {
+                context.write_obs(name, value);
+            },
+            OutputTarget::FieldAndScratchpad { field, scratchpad } => {
+                context.write_obs(scratchpad, value);
+                match field.as_str() {
+                    "goal" => {
+                        context.goal = Some(value.clone().as_str().unwrap_or("Goal Expected a String").to_string());
+                    },
+                    "topic" => {
+                        context.topic = Some(value.clone().as_str().unwrap_or("Topic Expected a String").to_string());
+                    },
+                    "roadmap" => {
+                        context.roadmap = Some(value.clone());
+                    },
+                    "skill_graph" => {
+                        context.skill_graph = Some(value.clone());
+                    },
+                    "lesson" => {
+                        context.lesson = Some(value.clone());
+                    },
+                    "quizz" => {
+                        context.quizz = Some(value.clone());
+                    },
+                    "user" => {
+                        context.user = Some(value.clone());
+                    },
+                    _ => {
+                        return Err(anyhow!("Invalid field name: {}", field));
+                    }
+                }
+            },
+        }
+        Ok(())
     }
 
     fn resolve_path(root: &Value, path: &[String]) -> Result<Value> {
