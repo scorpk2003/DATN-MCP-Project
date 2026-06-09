@@ -118,7 +118,7 @@ impl StepBinding {
         Ok(binding)
     }
 
-    pub async fn resolve_params(&mut self, context: &AgentContext, executor: &Client<OpenAIConfig>, prompt: &PromptBuilder) -> Result<Value> {
+    pub async fn resolve_params(&self, context: &AgentContext, executor: &Client<OpenAIConfig>, prompt: &PromptBuilder) -> Result<Value> {
         match &self.input {
             InputResolver::Context { keys } => {
                 let ctx = serde_json::to_value(context)?;
@@ -168,70 +168,19 @@ impl StepBinding {
         }
     }
 
-    pub fn apply_output(&mut self, context: &mut AgentContext, value: &Value) -> Result<()> {
+    pub fn apply_output(&mut self, context: &mut AgentContext, value: &Value) {
         match &self.output {
             OutputTarget::Field { name } => {
-                match name.as_str() {
-                    "goal" => {
-                        context.goal = Some(value.clone().as_str().unwrap_or("Goal Expected a String").to_string());
-                    },
-                    "topic" => {
-                        context.topic = Some(value.clone().as_str().unwrap_or("Topic Expected a String").to_string());
-                    },
-                    "roadmap" => {
-                        context.roadmap = Some(value.clone());
-                    },
-                    "skill_graph" => {
-                        context.skill_graph = Some(value.clone());
-                    },
-                    "lesson" => {
-                        context.lesson = Some(value.clone());
-                    },
-                    "quizz" => {
-                        context.quizz = Some(value.clone());
-                    },
-                    "user" => {
-                        context.user = Some(value.clone());
-                    },
-                    _ => {
-                        return Err(anyhow!("Invalid field name: {}", name));
-                    }
-                }
+                context.write_field(name, value);
             },
             OutputTarget::Scratchpad { name } => {
                 context.write_obs(name, value);
             },
             OutputTarget::FieldAndScratchpad { field, scratchpad } => {
                 context.write_obs(scratchpad, value);
-                match field.as_str() {
-                    "goal" => {
-                        context.goal = Some(value.clone().as_str().unwrap_or("Goal Expected a String").to_string());
-                    },
-                    "topic" => {
-                        context.topic = Some(value.clone().as_str().unwrap_or("Topic Expected a String").to_string());
-                    },
-                    "roadmap" => {
-                        context.roadmap = Some(value.clone());
-                    },
-                    "skill_graph" => {
-                        context.skill_graph = Some(value.clone());
-                    },
-                    "lesson" => {
-                        context.lesson = Some(value.clone());
-                    },
-                    "quizz" => {
-                        context.quizz = Some(value.clone());
-                    },
-                    "user" => {
-                        context.user = Some(value.clone());
-                    },
-                    _ => {
-                        return Err(anyhow!("Invalid field name: {}", field));
-                    }
-                }
+                context.write_field(field, value);
             },
         }
-        Ok(())
     }
 
     fn resolve_path(root: &Value, path: &[String]) -> Result<Value> {

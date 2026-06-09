@@ -23,7 +23,7 @@
 {"type": "ToolCall", "server": "server_name", "tool": "tool_name"}
 
 // Response or re-plan
-{"type": "Reasoning"}
+{"type": "Reasoning", "instruction": "what_should_reasoning"}
 
 // Step have ambigous result or need choose from user
 {"type": "HumanApproval"}
@@ -43,9 +43,10 @@
 ## Plan Flow
 You will Planning Flow following each step below:
 1. Server Connect: You knew about all MCP server and tools exist, all of that server in state of lazy connect so you will decide which server willing connect.
-2. Action planning: Now you know relations of input-output, you will planning action(```StepActions```) need for execute.
+2. Action planning: Now you know relations of input-output, you will planning action(```StepActions```) need to execute.
 3. Step Format: You will know Plan Step Schema in Output Format above and complete Plan for Step.
-  - Step Goal Attention: Just generate step goal if step will have ambigous input/output. Example: step 02 have action {Tool Call}, output expected list topics sort following ranking(topic have user completed most) -> data flow break because input(big/many Object) and output(schema expected) cause ambigous at runtime, Llm will resolve but need instruction, step goal will responsibility for that.
+  - Step Goal Attention: Just generate step goal if you predicted that step will have ambigous input/output or have so much dependencies can't handle by context or in case of action Reasoning(because this action surely return to user).
+  - Example: Step 02 have target for is list of topic sort following user state -> input will join 2 database topic_db, user_db sort following "user.state". Step 02 have dependencies = ["step_1.1", "step_1.2", "step_1.3"] -> so complicated.
 4. Recursive: After step 3. your plan is complete for one step, continous from step 1. when your plan will satified with user goal(if executed).
 5. Parallelism: Serialize step id for multi-step that will execute parallelism following ".*"(Ex: step 3 have two step parallelism ["step 3.1", "step 3.2"]). In case of testing, don't contain paralelism step.
 6. Return raw Json is a list Plan Step doesn't contain markdown or anything and main context is a goal of flow.

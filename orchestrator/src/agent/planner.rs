@@ -71,6 +71,10 @@ impl PlanStep {
 
         Ok((response, Some(step_goal)))
     }
+
+    pub async fn re_plan(&self, planner: &Client<OpenAIConfig>, prompt: &PromptBuilder) -> PlanStep {
+        
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
