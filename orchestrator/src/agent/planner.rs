@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{AGENT_TESTING, McpClient, PromptBuilder};
+use crate::{AGENT_TESTING, AgentContext, McpClient, PromptBuilder};
 use async_openai::{Client, config::OpenAIConfig, types::{self, chat::{ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequest}}};
 use anyhow::Result;
 use tracing::info;
@@ -72,8 +72,13 @@ impl PlanStep {
         Ok((response, Some(step_goal)))
     }
 
-    pub async fn re_plan(&self, planner: &Client<OpenAIConfig>, prompt: &PromptBuilder) -> PlanStep {
-        
+    pub async fn re_plan(
+        planner: &Client<OpenAIConfig>,
+        prompt: &PromptBuilder,
+        context: &AgentContext,
+        observation: String,
+    ) -> Result<Vec<Self>> {
+        Ok(Vec::new())
     }
 }
 

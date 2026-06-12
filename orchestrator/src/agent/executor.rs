@@ -35,6 +35,7 @@ impl Default for ExecutionState {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct StepExecutionResult {
     pub success: bool,
     pub output: Value,

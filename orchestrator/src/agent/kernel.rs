@@ -79,7 +79,8 @@ impl AgentKernel {
                     self.state.status = ExecutionStatus::Waiting(step_result.observation.unwrap().clone());
                 },
                 EvaluationDecision::Replan => {
-                    self.state.status = ExecutionStatus::RePlanning(step_result.observation.unwrap().clone());
+                    self.state.status = ExecutionStatus::RePlanning(step_result.observation.as_ref().unwrap().clone());
+                    self.state.plan = PlanStep::re_plan(&self.planner, &prompt, &self.state.context, step_result.observation.unwrap().clone()).await?;
                 },
                 EvaluationDecision::Finish => {
                     self.state.status = ExecutionStatus::Completed;
