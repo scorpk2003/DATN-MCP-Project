@@ -17,7 +17,6 @@ pub enum Phase {
     Planning,
     Binding,
     Execution,
-    Failure,
     Testing,
 }
 
@@ -38,7 +37,6 @@ impl PromptBuilder {
             Some(Phase::Planning) => "planning",
             Some(Phase::Binding) => "binding",
             Some(Phase::Execution) => "execution",
-            Some(Phase::Failure) => "failure",
             Some(Phase::Testing) => "testing",
             None => "general",
         };
@@ -79,21 +77,6 @@ impl PromptBuilder {
             }
         }
         self.phase_rules = Some(binding_phase_rules);
-    }
-
-    pub async fn build_failure_phase(&mut self, is_test: bool) {
-        let mut failure_phase_rules = fs::read_to_string("src/prompt/failure.md").await.expect("Failed to load Failure Phase Prompt");
-        match is_test {
-            true => {
-                let test = fs::read_to_string("src/prompt/test.md").await.expect("Fail to load Test file for Binding Phase");
-                failure_phase_rules.push_str(test.as_str());
-                self.phasing = Some(Phase::Testing);
-            },
-            false => {
-                self.phasing = Some(Phase::Failure);
-            }
-        }
-        self.phase_rules = Some(failure_phase_rules);
     }
 
 }

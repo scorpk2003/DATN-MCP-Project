@@ -51,6 +51,14 @@ You will Planning Flow following each step below:
 5. Parallelism: Serialize step id for multi-step that will execute parallelism following ".*"(Ex: step 3 have two step parallelism ["step 3.1", "step 3.2"]). In case of testing, don't contain paralelism step.
 6. Return raw Json is a list Plan Step doesn't contain markdown or anything and main context is a goal of flow.
 
+## Re-planning
+- In case of step exection failed, you will will watch observation and re-plan from step that execute failed. If you evaluate the cause of failed step can't fix, you can return following this format:
+```json
+{
+  "cause": ["cause_that_break_programs"],
+}
+```
+
 ## Ouput Format
 The value that you return will use for Rust Programming Language, unless planning exactly the program will break.
 - Output Json Schema:

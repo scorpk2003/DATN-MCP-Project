@@ -78,7 +78,56 @@ impl PlanStep {
         context: &AgentContext,
         observation: String,
     ) -> Result<Vec<Self>> {
-        Ok(Vec::new())
+        let mut prompt_build = prompt.clone();
+        prompt_build.build_planning_phase(AGENT_TESTING).await;
+        let system_prompt = prompt_build.build_system_prompt();
+        let mut last_obs = Vec::new();
+        last_obs.push(format!("Step execute failed, this is full observation!!!"));
+        last_obs.push(observation);
+        last_obs.push(context.last_obs().unwrap_or_default().to_string());
+        let user_prompt = ChatCompletionRequestUserMessageArgs::default().content(last_obs.join("\n\n")).build().unwrap();
+        let request = CreateChatCompletionRequest {
+            messages: vec![
+                ChatCompletionRequestMessage::System(system_prompt),
+                ChatCompletionRequestMessage::User(user_prompt),
+            ],
+            model: "openai/gpt-4o-mini".to_string(),
+            response_format: Some(types::chat::ResponseFormat::JsonObject),
+            ..Default::default()
+        };
+        let response_content = match planner.chat().create(request).await {
+            Ok(res) => {
+                println!("\t\tRe-plan generated successfully: \n{:#?}\n\n", res);
+                info!("\t\tRe-plan generated successfully: \n{:#?}\n\n", res);
+                res
+            },
+            Err(e) => {
+                println!("Failed to generate re-plan: {}", e);
+                info!("Failed to generate re-plan: {}", e);
+                return Err(anyhow::anyhow!("Failed to generate re-plan: {}", e));
+            }
+        };
+        let content = response_content.choices
+            .first()
+            .and_then(|c| c.message.content.as_ref())
+            .ok_or_else(|| anyhow::anyhow!("No content in re-planner response"))?;
+        let step: serde_json::Value = serde_json::from_str(content).map_err(|f| anyhow::anyhow!("Failed to parse re-plan response: {}", f))?;
+        let response = match step.get("steps") {
+            Some(steps) => serde_json::from_value(steps.clone()).map_err(|f| anyhow::anyhow!("Failed to parse re-plan steps: {}", f))?,
+            None => {
+                println!("No steps found in re-planner response: {}", content);
+                match step.get("cause") {
+                    Some(step) => {
+                        let cause = step.as_str().unwrap();
+                        return Err(anyhow::anyhow!("Failed to Re-plan due to cause: {}", cause));
+                    },
+                    None => {
+                        return Err(anyhow::anyhow!("Nothing in re-plan"));
+                    }
+                }
+            }
+        };
+        Ok(response)
     }
 }
 

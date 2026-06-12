@@ -168,7 +168,7 @@ impl StepBinding {
         }
     }
 
-    pub fn apply_output(&mut self, context: &mut AgentContext, value: &Value) {
+    pub fn apply_output(&self, context: &mut AgentContext, value: &Value) {
         match &self.output {
             OutputTarget::Field { name } => {
                 context.write_field(name, value);

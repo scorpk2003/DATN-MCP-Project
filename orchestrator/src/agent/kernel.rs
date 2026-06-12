@@ -68,6 +68,7 @@ impl AgentKernel {
             // Execute Phase
             self.state.status = ExecutionStatus::Running;
             let step_result = self.execute_step(step, &binding, &prompt).await;
+            binding.apply_output(&mut self.state.context, &step_result.output);
 
             // Evaluation Phase
             let evaluation = EvaluationStep::evaluate(step.id.clone(), &step_result).await;
@@ -81,12 +82,14 @@ impl AgentKernel {
                 EvaluationDecision::Replan => {
                     self.state.status = ExecutionStatus::RePlanning(step_result.observation.as_ref().unwrap().clone());
                     self.state.plan = PlanStep::re_plan(&self.planner, &prompt, &self.state.context, step_result.observation.unwrap().clone()).await?;
+                    continue;
                 },
                 EvaluationDecision::Finish => {
                     self.state.status = ExecutionStatus::Completed;
                     break;
                 }
             }
+            info!("Step {} execution completed!!!", step.id.clone());
         }
 
         info!("Done!!!");
