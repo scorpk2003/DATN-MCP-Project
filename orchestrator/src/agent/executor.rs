@@ -35,6 +35,19 @@ impl Default for ExecutionState {
     }
 }
 
+impl ExecutionState {
+    pub fn new(session_id: String) -> Self {
+        Self {
+            session_id,
+            status: ExecutionStatus::Init,
+            current_step: 0,
+            plan: Vec::new(),
+            context: AgentContext::default(),
+            resolver: Vec::new()
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct StepExecutionResult {
     pub success: bool,

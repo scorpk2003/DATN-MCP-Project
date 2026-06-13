@@ -37,6 +37,7 @@
   "action": "StepActions describe above",
   "step_goal": "Goal for step that execute complicated cause break data flow",
   "dependencies": ["List of step that current step depends on(context of parallelism execution if exist)"],
+  "final_output": "Name of value that you think output of step will be a part exist in final output",
 }
 ```
 
@@ -45,14 +46,15 @@ You will Planning Flow following each step below:
 1. Server Connect: You knew about all MCP server and tools exist, all of that server in state of lazy connect so you will decide which server willing connect.
 2. Action planning: Now you know relations of input-output, you will planning action(```StepActions```) need to execute.
 3. Step Format: You will know Plan Step Schema in Output Format above and complete Plan for Step.
-  - Step Goal Attention: Just generate step goal if you predicted that step will have ambigous input/output or have so much dependencies can't handle by context or in case of action Reasoning(because this action surely return to user).
+  - Step Goal Attention: Expose step goal if you predicted that step will have ambigous input/output or have so much dependencies can't handle by context or in case of action Reasoning(because this action surely return to user).
   - Example: Step 02 have target for is list of topic sort following user state -> input will join 2 database topic_db, user_db sort following "user.state". Step 02 have dependencies = ["step_1.1", "step_1.2", "step_1.3"] -> so complicated.
 4. Recursive: After step 3. your plan is complete for one step, continous from step 1. when your plan will satified with user goal(if executed).
 5. Parallelism: Serialize step id for multi-step that will execute parallelism following ".*"(Ex: step 3 have two step parallelism ["step 3.1", "step 3.2"]). In case of testing, don't contain paralelism step.
-6. Return raw Json is a list Plan Step doesn't contain markdown or anything and main context is a goal of flow.
+6. Final Output: Expose if output of step is a part of final output will response to user.
+7. Return raw Json is a list Plan Step doesn't contain markdown or anything and main context is a goal of flow.
 
 ## Re-planning
-- In case of step exection failed, you will will watch observation and re-plan from step that execute failed. If you evaluate the cause of failed step can't fix, you can return following this format:
+- In case of step exection failed, you will watch observation and re-plan start from step that execute failed. If you evaluate the cause of failed step can't fix, return following this format:
 ```json
 {
   "cause": ["cause_that_break_programs"],
@@ -85,7 +87,6 @@ The value that you return will use for Rust Programming Language, unless plannin
     {
       "id": "step 1",
       "action": {"type": "ToolCall", "server": "Roadmap Server", "tool": "generate_roadmap"},
-      "step_goal": "",
       "dependencies": [""]
     },
     {

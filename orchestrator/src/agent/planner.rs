@@ -11,6 +11,7 @@ pub struct PlanStep {
     pub action: StepActions,
     pub step_goal: Option<String>,
     pub dependencies: Vec<String>,
+    pub final_output: Option<String>,
 }
 
 impl PlanStep {
@@ -119,7 +120,7 @@ impl PlanStep {
                 match step.get("cause") {
                     Some(step) => {
                         let cause = step.as_str().unwrap();
-                        return Err(anyhow::anyhow!("Failed to Re-plan due to cause: {}", cause));
+                        return Err(anyhow::anyhow!("Failed to Re-plan due to dangerous cause: {}", cause));
                     },
                     None => {
                         return Err(anyhow::anyhow!("Nothing in re-plan"));

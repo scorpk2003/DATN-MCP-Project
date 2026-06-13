@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use async_openai::types::chat::ResponseFormat::JsonObject;
-use serde_json::{Value, json};
+use serde_json::{Map, Value, json};
 
 use crate::{AGENT_TESTING, EvaluationDecision, EvaluationStep, ExecutionState, ExecutionStatus, McpClient, PlanStep, PromptBuilder, ServerConfig, StepActions, StepBinding, StepExecutionResult};
 use async_openai::{Client, config::OpenAIConfig, types::{self, chat::{ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequest}}};
@@ -12,6 +14,7 @@ pub struct AgentKernel {
     pub clients: Vec<McpClient>,
     pub state: ExecutionState,
     pub evaluation: Vec<EvaluationStep>,
+    final_output: Map<String, Value>,
 }
 
 impl Default for AgentKernel {
@@ -22,18 +25,13 @@ impl Default for AgentKernel {
         .with_api_key(api_key);
         let planner = Client::with_config(config.clone());
         let executor = Client::with_config(config);
-        Self {
-            planner,
-            executor,
-            clients: Vec::new(),
-            state: ExecutionState::default(),
-            evaluation: Vec::new()
-        }
+        let final_output = Map::new();
+        Self { planner, executor, clients: Vec::new(), state: ExecutionState::default(), evaluation: Vec::new(), final_output }
     }
 }
 
 impl AgentKernel {
-    pub async fn new(server_configs: Vec<ServerConfig>) -> Result<Self> {
+    pub async fn new(server_configs: Vec<ServerConfig>, session_id: String) -> Result<Self> {
         let mut clients = Vec::new();
         for server_config in server_configs {
             let client = McpClient::connect(&server_config).await?;
@@ -41,11 +39,12 @@ impl AgentKernel {
         }
         let planner = Client::new();
         let executor = Client::new();
-        let state = ExecutionState::default();
+        let state = ExecutionState::new(session_id);
         let evaluation = Vec::new();
-        Ok(Self { clients, planner, executor, state, evaluation })
+        let final_output = Map::new();
+        Ok(Self { clients, planner, executor, state, evaluation, final_output })
     }
-    pub async fn run(&mut self, goal: String) -> Result<()> {
+    pub async fn run(&mut self, goal: String) -> Result<Value> {
 
         self.state.status = ExecutionStatus::Planning;
 
@@ -75,6 +74,9 @@ impl AgentKernel {
             match evaluation.decision {
                 EvaluationDecision::Continue => {
                     self.state.current_step += 1;
+                    if step.final_output.is_some() {
+                        self.final_output.insert(step.final_output.clone().unwrap(), step_result.output.clone());
+                    }
                 },
                 EvaluationDecision::Wait => {
                     self.state.status = ExecutionStatus::Waiting(step_result.observation.unwrap().clone());
@@ -93,7 +95,7 @@ impl AgentKernel {
         }
 
         info!("Done!!!");
-        Ok(())
+        Ok(Value::Object(self.final_output.clone()))
     }
 
     async fn execute_step(&mut self, step: &PlanStep, binding: &StepBinding, prompt: &PromptBuilder) -> StepExecutionResult {

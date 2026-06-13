@@ -1,6 +1,6 @@
 use std::env;
 
-
+#[derive(Clone)]
 pub struct ServerConfig {
     pub name: String,
     pub host: String,
