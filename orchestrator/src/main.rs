@@ -1,9 +1,9 @@
 
-use std::{env};
+use std::{env, sync::Arc};
 use tokio::net::TcpListener;
 
 use anyhow::{Result};
-use axum::Router;
+use axum::{Router, routing::post};
 use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt};
 
@@ -53,8 +53,19 @@ async fn main() -> Result<()> {
     // Init Logging
     init_tracing(log_level);
 
+    // Connect MCP Server
+    let roadmap_sv = ServerConfig::new("roadmap");
+    let lesson_sv = ServerConfig::new("lesson");
+    let github_sv = ServerConfig::new("github");
+    let figma_sv = ServerConfig::new("figma");
+
+    let clients = vec![roadmap_sv, lesson_sv, github_sv, figma_sv];
+    let state = Arc::new(AppState {clients});
+
     // Config Server
-    let app = Router::new();
+    let app = Router::new()
+        .route("agent/run", post(agent_handler))
+        .with_state(state);
     let listener = TcpListener::bind(addr.clone()).await?;
 
     // Server Running

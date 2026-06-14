@@ -4,7 +4,7 @@ use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{AgentKernel, McpClient, ServerConfig};
+use crate::{AgentKernel, ServerConfig};
 
 pub struct AppState {
     pub clients: Vec<ServerConfig>,
