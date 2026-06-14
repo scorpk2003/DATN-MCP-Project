@@ -1,0 +1,18 @@
+[package]
+name = "orchestrator"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { version = "1.52.3", features = ["full"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = { version = "1.0.149" }
+anyhow = { version = "1.0.102" }
+axum = {version = "0.8.9", features = ["json", "tokio", "tracing"] }
+tracing = {version = "0.1.44" }
+tracing-subscriber = {version = "0.3.23", features = ["fmt", "env-filter"] }
+dotenv = "0.15.0"
+rmcp = {version = "1.6.0", features = ["client", "client-side-sse", "transport-streamable-http-client-reqwest"] }
+tokio-util = "0.7.4"
+async-openai = {version = "0.38", features = ["byot", "chat-completion"]}
+jsonschema = "0.46.5"
