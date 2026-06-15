@@ -1,0 +1,17 @@
+[workspace]
+members = [
+    "database_sv"
+]
+
+[workspace.dependencies]
+tokio = { version = "1.52.3", features = ["full"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = { version = "1.0.149" }
+anyhow = { version = "1.0.102" }
+axum = {version = "0.8.9", features = ["json", "tokio", "tracing"] }
+tracing = {version = "0.1.44" }
+tracing-subscriber = {version = "0.3.23", features = ["fmt", "env-filter"] }
+dotenv = "0.15.0"
+rmcp = {version = "1.6.0", features = ["transport-streamable-http-server", "server"] }
+deadpool = "0.12.3"
+deadpool-postgres = "0.14.1"
