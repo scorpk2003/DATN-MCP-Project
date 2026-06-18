@@ -1,7 +1,8 @@
 use std::{collections::HashMap, time::Duration};
 
-use deadpool::{Runtime::Tokio1, managed::QueueMode::{self, Fifo}};
-use deadpool_postgres::{Config, Object, Pool, PoolConfig, PoolError, Timeouts, tokio_postgres::NoTls};
+use deadpool::{Runtime::Tokio1, managed::QueueMode::{self}};
+use deadpool_postgres::{Config, Object, Pool, PoolConfig, PoolError, SslMode::Require, Timeouts};
+use rustls::{ClientConfig, RootCertStore};
 use serde_json::Value;
 use tracing::info;
 
@@ -41,31 +42,39 @@ impl SchemaProvider {
                 max_size: self.db.max_conn as usize,
                 timeouts: Timeouts {
                     wait: Some(Duration::from_secs(30)),
-                    create: Some(Duration::from_secs(30)),
+                    create: Some(Duration::from_secs(300)),
                     recycle: Some(Duration::from_secs(30)),
                 },
                 queue_mode: QueueMode::Fifo,
             });
 
-            let option = self.pg_config.get("server_settings").unwrap().as_object().unwrap();
-            let mut opt = String::new();
-            for (key, val) in option {
-                let value = match val {
-                    serde_json::Value::String(s) => s.clone(),
-                    _ => val.to_string(),
-                };
-                opt.push_str(&format!("-c {}={} ", key, value));
-            }
-
-            config.options = Some(opt.trim().to_string());
+            //Local
+            // let option = self.pg_config.get("server_settings").unwrap().as_object().unwrap();
+            // let mut opt = String::new();
+            // for (key, val) in option {
+            //     let value = match val {
+            //         serde_json::Value::String(s) => s.clone(),
+            //         _ => val.to_string(),
+            //     };
+            //     opt.push_str(&format!("-c {}={} ", key, value));
+            // }
+            // config.options = Some(opt.trim().to_string());
+            
+            config.ssl_mode = Some(Require);
+            let tls_cfg = ClientConfig::builder().with_root_certificates(
+                RootCertStore::from_iter(
+                    webpki_roots::TLS_SERVER_ROOTS.iter().cloned()
+                )
+            ).with_no_client_auth();
+            let tls = tokio_postgres_rustls::MakeRustlsConnect::new(tls_cfg);
             println!("{:?}", config);
-            self.connection_pool = Some(config.create_pool(Some(Tokio1), NoTls).unwrap());
+            self.connection_pool = Some(config.create_pool(Some(Tokio1), tls).unwrap());
 
             info!("\tDatabase Connection pool created successfully!!!");
         }
     }
 
-    pub async fn close_pool(&mut self) {
+    pub fn close_pool(&mut self) {
         if self.connection_pool.is_some() {
             self.connection_pool = None;
         }

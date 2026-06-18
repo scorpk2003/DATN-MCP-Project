@@ -14,3 +14,8 @@ deadpool ={ workspace = true }
 deadpool-postgres ={ workspace = true }
 serde = {workspace = true}
 serde_json ={ workspace = true}
+tokio-postgres-rustls = "0.14.0"
+rustls = "0.23"
+webpki-roots = "1.0.7"
+rmcp = {workspace=true}
+tokio-util = {workspace = true}

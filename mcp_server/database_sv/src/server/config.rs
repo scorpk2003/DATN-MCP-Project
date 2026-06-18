@@ -1,7 +1,6 @@
 use std::{collections::HashMap, env};
 
-use serde_json::{Value, json};
-
+use serde_json::{Value};
 
 #[derive(Debug, Clone)]
 pub struct DatabaseConfig {
@@ -40,14 +39,7 @@ impl Default for DatabaseConfig {
 impl DatabaseConfig {
     pub fn async_params(&self) -> HashMap<String, Value> {
         let mut params = HashMap::new();
-        let db_timeout = self.timeout;
-
-        let server_settings = json!({
-            "application_name": "self-learn",
-            "jit": "off",
-            "work_mem": "4MB",
-            "statement_timeout": &db_timeout.to_string(),
-        });
+        
 
         params.insert("host".to_string(), Value::String(self.host.clone()));
         params.insert("port".to_string(), Value::Number(self.port.into()));
@@ -55,7 +47,16 @@ impl DatabaseConfig {
         params.insert("user".to_string(), Value::String(self.user.clone()));
         params.insert("password".to_string(), Value::String(self.pass.clone()));
         params.insert("command_timeout".to_string(), Value::Number(self.timeout.into()));
-        params.insert("server_settings".to_string(), server_settings);
+
+        // LOCAL
+        // let db_timeout = self.timeout*1000;
+        // let server_settings = json!({
+        //     "application_name": "self-learn",
+        //     "jit": "off",
+        //     "work_mem": "4MB",
+        //     "statement_timeout": &db_timeout.to_string(),
+        // });
+        // params.insert("server_settings".to_string(), server_settings);
 
         params
     }

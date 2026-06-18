@@ -2,6 +2,7 @@ use std::env;
 
 use anyhow::Result;
 use axum::{Router, routing::post};
+use rmcp::transport::StreamableHttpServerConfig;
 use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt};
 
@@ -10,6 +11,23 @@ use server::*;
 
 mod provider;
 use provider::*;
+
+mod schemas;
+use schemas::*;
+
+pub static VALID_TABLES: &[&str] = &[
+    "public.users",
+    "public.tasks",
+    "public.task_progress",
+    "public.roadmaps",
+    "public.roadmap_phases",
+    "public.projects",
+    "public.notes",
+    "public.milestones",
+    "public.messages",
+    "public.conversations",
+    "public.learning_resources"
+];
 
 fn init_tracing(level: &str) {
     let filter = match EnvFilter::try_new(level) {
@@ -39,6 +57,9 @@ async fn main() -> Result<()> {
     dotenv::from_path("../../.env").ok();
     let log_level = &env::var("LOG_LEVEL").unwrap_or_else(|_| "info".into());
     init_tracing(log_level);
+
+    let server = DbServer::new();
+    server.run().await?;
 
     Ok(())
 }
