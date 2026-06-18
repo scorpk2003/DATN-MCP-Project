@@ -1,13 +1,15 @@
 use std::{collections::HashMap, time::Duration};
 
-use deadpool::{Runtime::Tokio1, managed::QueueMode::{self}};
+use deadpool::{
+    Runtime::Tokio1,
+    managed::QueueMode::{self},
+};
 use deadpool_postgres::{Config, Object, Pool, PoolConfig, PoolError, SslMode::Require, Timeouts};
 use rustls::{ClientConfig, RootCertStore};
 use serde_json::Value;
 use tracing::info;
 
 use crate::server::DatabaseConfig;
-
 
 #[derive(Debug, Clone)]
 pub struct SchemaProvider {
@@ -22,7 +24,11 @@ impl Default for SchemaProvider {
         let db = DatabaseConfig::default();
         let pg_config = DatabaseConfig::async_params(&db);
 
-        Self { connection_pool, pg_config, db }
+        Self {
+            connection_pool,
+            pg_config,
+            db,
+        }
     }
 }
 
@@ -31,12 +37,46 @@ impl SchemaProvider {
         if self.connection_pool.is_none() {
             let mut config = Config::new();
 
-            config.host = Some(self.pg_config.get("host").unwrap().as_str().unwrap().to_string());
+            config.host = Some(
+                self.pg_config
+                    .get("host")
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_string(),
+            );
             config.port = Some(self.pg_config.get("port").unwrap().as_u64().unwrap() as u16);
-            config.dbname = Some(self.pg_config.get("db").unwrap().as_str().unwrap().to_string());
-            config.user = Some(self.pg_config.get("user").unwrap().as_str().unwrap().to_string());
-            config.password = Some(self.pg_config.get("password").unwrap().as_str().unwrap().to_string());
-            config.connect_timeout = Some(Duration::from_secs(self.pg_config.get("command_timeout").unwrap().as_u64().unwrap()));
+            config.dbname = Some(
+                self.pg_config
+                    .get("db")
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_string(),
+            );
+            config.user = Some(
+                self.pg_config
+                    .get("user")
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_string(),
+            );
+            config.password = Some(
+                self.pg_config
+                    .get("password")
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_string(),
+            );
+            config.connect_timeout = Some(Duration::from_secs(
+                self.pg_config
+                    .get("command_timeout")
+                    .unwrap()
+                    .as_u64()
+                    .unwrap(),
+            ));
 
             config.pool = Some(PoolConfig {
                 max_size: self.db.max_conn as usize,
@@ -59,13 +99,13 @@ impl SchemaProvider {
             //     opt.push_str(&format!("-c {}={} ", key, value));
             // }
             // config.options = Some(opt.trim().to_string());
-            
+
             config.ssl_mode = Some(Require);
-            let tls_cfg = ClientConfig::builder().with_root_certificates(
-                RootCertStore::from_iter(
-                    webpki_roots::TLS_SERVER_ROOTS.iter().cloned()
-                )
-            ).with_no_client_auth();
+            let tls_cfg = ClientConfig::builder()
+                .with_root_certificates(RootCertStore::from_iter(
+                    webpki_roots::TLS_SERVER_ROOTS.iter().cloned(),
+                ))
+                .with_no_client_auth();
             let tls = tokio_postgres_rustls::MakeRustlsConnect::new(tls_cfg);
             println!("{:?}", config);
             self.connection_pool = Some(config.create_pool(Some(Tokio1), tls).unwrap());
@@ -101,7 +141,7 @@ mod test {
         match provider.get_connections().await {
             Ok(p) => {
                 println!("\tGet Connection success:\n\t{:?}", p);
-            },
+            }
             Err(e) => {
                 println!("\tGet Connection failed:\n\t{:?}", e);
             }

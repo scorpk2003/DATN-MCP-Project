@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env};
 
-use serde_json::{Value};
+use serde_json::Value;
 
 #[derive(Debug, Clone)]
 pub struct DatabaseConfig {
@@ -16,37 +16,52 @@ pub struct DatabaseConfig {
 
 impl Default for DatabaseConfig {
     fn default() -> Self {
-        let host = env::var("DB_HOST")
-            .unwrap_or("localhost01".to_string());
+        let host = env::var("DB_HOST").unwrap_or("localhost01".to_string());
         let port = env::var("DB_PORT")
-            .unwrap_or("5433".to_string()).parse::<usize>().unwrap();
-        let db = env::var("DB_NAME")
-            .unwrap_or("DATABASE_SERVER".to_string());
-        let user = env::var("DB_USER")
-            .unwrap_or("admin".to_string());
-        let pass = env::var("DB_PASS")
-            .unwrap_or("admin".to_string());
+            .unwrap_or("5433".to_string())
+            .parse::<usize>()
+            .unwrap();
+        let db = env::var("DB_NAME").unwrap_or("DATABASE_SERVER".to_string());
+        let user = env::var("DB_USER").unwrap_or("admin".to_string());
+        let pass = env::var("DB_PASS").unwrap_or("admin".to_string());
         let max_conn = env::var("POSTGRES_MAX_CONNECTIONS")
-            .unwrap_or("10".to_string()).parse::<i32>().unwrap();
+            .unwrap_or("10".to_string())
+            .parse::<i32>()
+            .unwrap();
         let min_conn = env::var("POSTGRES_MIN_CONNECTIONS")
-            .unwrap_or("1".to_string()).parse::<i32>().unwrap();
+            .unwrap_or("1".to_string())
+            .parse::<i32>()
+            .unwrap();
         let timeout = env::var("CMD_TIMEOUT")
-            .unwrap_or("30".to_string()).parse::<i32>().unwrap();
-        Self { host, port, db, user, pass, max_conn, min_conn, timeout }
+            .unwrap_or("30".to_string())
+            .parse::<i32>()
+            .unwrap();
+        Self {
+            host,
+            port,
+            db,
+            user,
+            pass,
+            max_conn,
+            min_conn,
+            timeout,
+        }
     }
 }
 
 impl DatabaseConfig {
     pub fn async_params(&self) -> HashMap<String, Value> {
         let mut params = HashMap::new();
-        
 
         params.insert("host".to_string(), Value::String(self.host.clone()));
         params.insert("port".to_string(), Value::Number(self.port.into()));
         params.insert("db".to_string(), Value::String(self.db.clone()));
         params.insert("user".to_string(), Value::String(self.user.clone()));
         params.insert("password".to_string(), Value::String(self.pass.clone()));
-        params.insert("command_timeout".to_string(), Value::Number(self.timeout.into()));
+        params.insert(
+            "command_timeout".to_string(),
+            Value::Number(self.timeout.into()),
+        );
 
         // LOCAL
         // let db_timeout = self.timeout*1000;
@@ -72,14 +87,17 @@ pub struct ServerConfig {
 impl Default for ServerConfig {
     fn default() -> Self {
         let host = env::var("SERVER_DATABASE_HOST").unwrap_or("0.0.0.1".to_string());
-        let port = env::var("SERVER_DATABASE_PORT").unwrap_or("3000".to_string()).parse::<usize>().unwrap();
+        let port = env::var("SERVER_DATABASE_PORT")
+            .unwrap_or("3000".to_string())
+            .parse::<usize>()
+            .unwrap();
         let url = format!("http://{}:{}", host, port);
         Self { host, port, url }
     }
 }
 
 mod test {
-    
+
     #[tokio::test]
     async fn test_db() {
         use crate::server::DatabaseConfig;

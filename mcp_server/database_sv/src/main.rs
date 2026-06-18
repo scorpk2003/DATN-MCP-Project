@@ -1,8 +1,6 @@
 use std::env;
 
 use anyhow::Result;
-use axum::{Router, routing::post};
-use rmcp::transport::StreamableHttpServerConfig;
 use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt};
 
@@ -10,10 +8,10 @@ mod server;
 use server::*;
 
 mod provider;
-use provider::*;
 
 mod schemas;
-use schemas::*;
+
+mod tools;
 
 pub static VALID_TABLES: &[&str] = &[
     "public.users",
@@ -26,7 +24,7 @@ pub static VALID_TABLES: &[&str] = &[
     "public.milestones",
     "public.messages",
     "public.conversations",
-    "public.learning_resources"
+    "public.learning_resources",
 ];
 
 fn init_tracing(level: &str) {
@@ -40,15 +38,16 @@ fn init_tracing(level: &str) {
         .with_target(true)
         .with_level(true)
         .with_timer(fmt::time::time())
-        .try_init() {
-            Ok(_) => {
-                info!("Tracing initialized successfully!!!");
-            },
-            Err(e) => {
-                tracing::error!("Failed to initialize tracing: {}", e);
-                eprint!("Failed to initialize tracing: {}", e);
-            }
-        };
+        .try_init()
+    {
+        Ok(_) => {
+            info!("Tracing initialized successfully!!!");
+        }
+        Err(e) => {
+            tracing::error!("Failed to initialize tracing: {}", e);
+            eprint!("Failed to initialize tracing: {}", e);
+        }
+    };
 }
 
 #[tokio::main]

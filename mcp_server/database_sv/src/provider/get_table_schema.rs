@@ -1,19 +1,17 @@
-use serde_json::{Map, Value, json};
-use tracing::{info, error};
 use anyhow::Result;
+use serde_json::{Map, Value, json};
+use tracing::{error, info};
 
 use crate::provider::SchemaProvider;
 
 impl SchemaProvider {
-    pub async fn get_table_schema(&mut self, table_name: &String)
-    -> Result<Map<String, Value>>
-    {
+    pub async fn get_table_schema(&mut self, table_name: &String) -> Result<Map<String, Value>> {
         let mut schema_info = Map::new();
         let conn = match self.get_connections().await {
             Ok(connection) => {
                 info!("\tGet connection for get table schema success!!!");
                 connection
-            },
+            }
             Err(e) => {
                 tracing::error!("\tFailed to get connection for get table schema: {e}");
                 return Err(e.into());
@@ -22,7 +20,7 @@ impl SchemaProvider {
 
         let (schema_name, table_name) = match table_name.split_once(".") {
             Some((schema, table)) => (schema, table),
-            None => ("public", table_name.as_str())
+            None => ("public", table_name.as_str()),
         };
         let column_query = "
                 SELECT 
@@ -40,7 +38,7 @@ impl SchemaProvider {
             Ok(rows) => {
                 info!("\tGet data infomation success!!!");
                 rows
-            },
+            }
             Err(e) => {
                 error!("\tGet data information for `{schema_name}.{table_name} failed!!!!`");
                 error!("\tError: {:?}", e);
@@ -69,7 +67,7 @@ impl SchemaProvider {
             Ok(fk) => {
                 info!("\tGet foreign key for `{schema_name}.{table_name}` success!!!");
                 fk
-            },
+            }
             Err(e) => {
                 error!("\tGet foreign key for `{schema_name}.{table_name}` failed!!!!");
                 error!("\tError: {:?}", e);
@@ -90,7 +88,7 @@ impl SchemaProvider {
             Ok(idx) => {
                 info!("\tGet index success!!!");
                 idx
-            },
+            }
             Err(e) => {
                 error!("\tGet index for `{schema_name}.{table_name}` failed!!!");
                 error!("\tError: {:?}", e);
@@ -112,7 +110,7 @@ impl SchemaProvider {
             let default = column.get::<_, Option<String>>("column_default");
             let max_length = column.get::<_, Option<i32>>("character_maximum_length");
             let position = column.get::<_, i32>("ordinal_position");
-            
+
             let col_result = json!({
                 "name": name,
                 "data_type": data_type,
@@ -130,7 +128,8 @@ impl SchemaProvider {
             let f_table_schema = fk.get::<_, String>("foreign_table_schema");
             let f_table_name = fk.get::<_, String>("foreign_table_name");
             let f_column_name = fk.get::<_, String>("foreign_column_name");
-            let references = Value::String(format!("{f_table_schema}.{f_table_name}.{f_column_name}"));
+            let references =
+                Value::String(format!("{f_table_schema}.{f_table_name}.{f_column_name}"));
 
             let column = Value::from(column);
             let fk_result = json!({
@@ -166,13 +165,15 @@ impl SchemaProvider {
 }
 
 mod test {
-    
+
     #[tokio::test]
     async fn test_get_table_schema() {
         use crate::provider::SchemaProvider;
         dotenv::from_path("../../.env").ok();
         let mut provider = SchemaProvider::default();
-        let table = provider.get_table_schema(&"public.learning_resources".to_string()).await;
-        println!("=={:?}==",table);
+        let table = provider
+            .get_table_schema(&"public.learning_resources".to_string())
+            .await;
+        println!("=={:?}==", table);
     }
 }

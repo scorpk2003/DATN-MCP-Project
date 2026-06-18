@@ -10,7 +10,7 @@ impl SchemaProvider {
             Ok(c) => {
                 info!("\tGet connection for health check success!!!");
                 c
-            },
+            }
             Err(e) => {
                 error!("\tGet connection for health check failed!!!");
                 return Err(e.into());
@@ -24,22 +24,22 @@ impl SchemaProvider {
             Ok(res) => {
                 info!("\tDatabase health check OK!!!");
                 info!("\tResult: {:?}", res);
-                res.get::< _, i32>(0)
-            },
+                res.get::<_, i32>(0)
+            }
             Err(e) => {
                 error!("\tDatabase health check error: {e}");
                 return Err(e.into());
             }
         };
-        
+
         let (max_size, current_size, idle_size) = match &self.connection_pool {
             Some(info) => {
                 let mx = info.status().max_size;
                 let idle = info.status().available;
                 let curr = info.status().size;
                 (mx, curr, idle)
-            },
-            None => (0, 0, 0)
+            }
+            None => (0, 0, 0),
         };
         let pool_info = json!({
             "max_size": max_size,
@@ -57,7 +57,7 @@ impl SchemaProvider {
 }
 
 mod test {
-    
+
     #[tokio::test]
     async fn test_health_check() {
         use crate::provider::SchemaProvider;
