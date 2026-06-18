@@ -1,0 +1,22 @@
+@layer base {
+    * {
+        @apply box-border font-normal bg-background text-txt max-h-screen max-w-screen;
+        @apply text-lg leading-normal;
+    }
+    
+    a {
+        @apply text-inherit no-underline;
+    }
+    
+    img {
+        @apply block max-w-full h-auto;
+    }
+
+    html *::-webkit-scrollbar {
+        border-radius: 0;
+        width: 2px;
+        height: 0;
+        visibility: hidden;
+    }
+
+}

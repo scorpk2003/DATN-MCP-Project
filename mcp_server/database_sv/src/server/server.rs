@@ -769,9 +769,6 @@ impl DbServer {
 impl Drop for DbServer {
     fn drop(&mut self) {
         info!("\tShutting down Database Server!!!!");
-        let mut provider = self.provider.blocking_lock();
-        let _ = provider.close_pool();
-        info!("\tDatabase Server shutdown is completed!!!");
     }
 }
 
