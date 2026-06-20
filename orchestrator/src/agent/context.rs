@@ -36,7 +36,8 @@ impl Default for AgentContext {
 impl AgentContext {
     pub fn write_obs(&mut self, step_id: &String, obs: &Value) {
         self.scratchpad.insert("last_obs".into(), obs.clone());
-        self.scratchpad.insert(format!("debug:step_{}", step_id.clone()), obs.clone());
+        self.scratchpad
+            .insert(format!("debug:step_{}", step_id.clone()), obs.clone());
     }
 
     pub fn write_field(&mut self, field_name: &String, value: &Value) {
@@ -61,6 +62,7 @@ impl AgentContext {
     }
 
     pub fn get_obs(&self, step_id: &String) -> Option<&Value> {
-        self.scratchpad.get(&format!("debug:step_{}", step_id.clone()))
+        self.scratchpad
+            .get(&format!("debug:step_{}", step_id.clone()))
     }
 }

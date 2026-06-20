@@ -1,5 +1,6 @@
-use async_openai::types::chat::{ChatCompletionRequestSystemMessage, 
-    ChatCompletionRequestSystemMessageArgs};
+use async_openai::types::chat::{
+    ChatCompletionRequestSystemMessage, ChatCompletionRequestSystemMessageArgs,
+};
 use tokio::fs;
 
 use crate::McpClient;
@@ -22,10 +23,21 @@ pub enum Phase {
 
 impl PromptBuilder {
     pub async fn new(clients: &Vec<McpClient>) -> Self {
-        let identity = fs::read_to_string("src/prompt/agent.md").await.expect("Failed to load Agent Prompt");
-        let tool_rules = clients.iter().map(|client| client.build_tool_prompt().join("\n")).collect::<Vec<_>>().join("\n\n");
+        let identity = fs::read_to_string("src/prompt/agent.md")
+            .await
+            .expect("Failed to load Agent Prompt");
+        let tool_rules = clients
+            .iter()
+            .map(|client| client.build_tool_prompt().join("\n"))
+            .collect::<Vec<_>>()
+            .join("\n\n");
         let phase_rules = None;
-        Self { identity, tool_rules, phase_rules, phasing: None }
+        Self {
+            identity,
+            tool_rules,
+            phase_rules,
+            phasing: None,
+        }
     }
 
     pub fn build_system_prompt(&self) -> ChatCompletionRequestSystemMessage {
@@ -50,35 +62,42 @@ impl PromptBuilder {
     }
 
     pub async fn build_planning_phase(&mut self, is_test: bool) {
-        let mut planning_phase_rules = fs::read_to_string("src/prompt/plan.md").await.expect("Failed to load Planning Phase Prompt");
+        let mut planning_phase_rules = fs::read_to_string("src/prompt/plan.md")
+            .await
+            .expect("Failed to load Planning Phase Prompt");
         match is_test {
             true => {
-                let test = fs::read_to_string("src/prompt/test.md").await.expect("Fail to load Test file for Planning Phase");
+                let test = fs::read_to_string("src/prompt/test.md")
+                    .await
+                    .expect("Fail to load Test file for Planning Phase");
                 planning_phase_rules.push_str(test.as_str());
                 self.phasing = Some(Phase::Testing);
-            },
+            }
             false => {
                 self.phasing = Some(Phase::Planning);
             }
         }
         self.phase_rules = Some(planning_phase_rules);
     }
-    
+
     pub async fn build_binding_phase(&mut self, is_test: bool) {
-        let mut binding_phase_rules = fs::read_to_string("src/prompt/resolver.md").await.expect("Failed to load Binding Phase Prompt");
+        let mut binding_phase_rules = fs::read_to_string("src/prompt/resolver.md")
+            .await
+            .expect("Failed to load Binding Phase Prompt");
         match is_test {
             true => {
-                let test = fs::read_to_string("src/prompt/test.md").await.expect("Fail to load Test file for Binding Phase");
+                let test = fs::read_to_string("src/prompt/test.md")
+                    .await
+                    .expect("Fail to load Test file for Binding Phase");
                 binding_phase_rules.push_str(test.as_str());
                 self.phasing = Some(Phase::Testing)
-            },
+            }
             false => {
                 self.phasing = Some(Phase::Binding);
             }
         }
         self.phase_rules = Some(binding_phase_rules);
     }
-
 }
 
 mod test {

@@ -15,7 +15,7 @@ impl Default for ServerConfig {
 }
 
 mod test {
-    
+
     #[tokio::test]
     async fn test_default() {
         use crate::server::config::ServerConfig;

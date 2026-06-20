@@ -1,6 +1,5 @@
 use crate::StepExecutionResult;
 
-
 pub enum EvaluationDecision {
     Continue,
     Wait,
@@ -25,9 +24,6 @@ impl EvaluationStep {
             EvaluationDecision::Finish
         };
 
-        EvaluationStep {
-            step_id,
-            decision,
-        }
+        EvaluationStep { step_id, decision }
     }
 }

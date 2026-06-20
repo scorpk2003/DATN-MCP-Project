@@ -2,7 +2,6 @@ use serde_json::Value;
 
 use crate::{AgentContext, PlanStep, StepBinding};
 
-
 pub enum ExecutionStatus {
     Init,
     Planning,
@@ -30,7 +29,7 @@ impl Default for ExecutionState {
             current_step: 0,
             plan: Vec::new(),
             context: AgentContext::default(),
-            resolver: Vec::new()
+            resolver: Vec::new(),
         }
     }
 }
@@ -43,7 +42,7 @@ impl ExecutionState {
             current_step: 0,
             plan: Vec::new(),
             context: AgentContext::default(),
-            resolver: Vec::new()
+            resolver: Vec::new(),
         }
     }
 }

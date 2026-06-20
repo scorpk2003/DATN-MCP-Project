@@ -9,6 +9,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.149" }
 anyhow = { version = "1.0.102" }
 axum = {version = "0.8.9", features = ["json", "tokio", "tracing"] }
+tower-http = { version = "0.6.7", features = ["cors"] }
 tracing = {version = "0.1.44" }
 tracing-subscriber = {version = "0.3.23", features = ["fmt", "env-filter"] }
 dotenv = "0.15.0"

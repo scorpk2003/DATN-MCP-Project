@@ -1,0 +1,21 @@
+[package]
+name = "resource_service"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.102"
+axum = { version = "0.8.9", features = ["json", "tokio", "tracing"] }
+deadpool-postgres = "0.14.1"
+dotenv = "0.15.0"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+sha2 = "0.10.9"
+thiserror = "2.0.17"
+tokio = { version = "1.52.3", features = ["full"] }
+tokio-postgres = { version = "0.7.15", features = ["with-serde_json-1", "with-uuid-1"] }
+tower-http = { version = "0.6.7", features = ["cors"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["fmt", "env-filter"] }
+url = "2.5.7"
+uuid = { version = "1.19.0", features = ["serde", "v4"] }

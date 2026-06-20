@@ -1,17 +1,16 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use jsonschema::{Validator};
-use rmcp::{RoleClient, 
-    ServiceExt,
+use jsonschema::Validator;
+use rmcp::{
+    RoleClient, ServiceExt,
     model::{CallToolRequestParams, Tool},
     service::RunningService,
-    transport::{StreamableHttpClientTransport},
+    transport::StreamableHttpClientTransport,
 };
-use serde_json::{Value};
+use serde_json::Value;
 
 use crate::ServerConfig;
-
 
 pub struct McpClient {
     pub server_name: String,
@@ -27,10 +26,13 @@ impl McpClient {
         let server_name = server.name.clone();
 
         let list_tools = list.tools.clone();
-        let tools = list_tools.iter().map(|tool| {
-            let name = tool.name.clone().into();
-            (name, tool.clone())
-        }).collect();
+        let tools = list_tools
+            .iter()
+            .map(|tool| {
+                let name = tool.name.clone().into();
+                (name, tool.clone())
+            })
+            .collect();
 
         Ok(Self {
             server_name,
@@ -42,24 +44,36 @@ impl McpClient {
     pub async fn call_tool(&self, tool_name: &str, params: Value) -> Result<Value> {
         let args = match params {
             Value::Object(obj) => Some(obj),
-            _ => None
+            _ => None,
         };
         let mut tool_params = CallToolRequestParams::new(tool_name.to_string());
         tool_params.arguments = args;
-        let result = self.peer.call_tool(tool_params.clone())
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to call tool: {} - {}", tool_params.name, e);
-            e
-        })?;
+        let result = self
+            .peer
+            .call_tool(tool_params.clone())
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to call tool: {} - {}", tool_params.name, e);
+                e
+            })?;
 
         Ok(serde_json::to_value(result.content)?)
     }
 
     pub fn build_tool_prompt(&self) -> Vec<String> {
-        self.tools.iter().map(|(_, tool)| {
-            format!("{}.{}: {}", self.server_name.clone(), tool.name.clone(), tool.description.clone().unwrap_or_else(|| "No description available".into()))
-        }).collect()
+        self.tools
+            .iter()
+            .map(|(_, tool)| {
+                format!(
+                    "{}.{}: {}",
+                    self.server_name.clone(),
+                    tool.name.clone(),
+                    tool.description
+                        .clone()
+                        .unwrap_or_else(|| "No description available".into())
+                )
+            })
+            .collect()
     }
 
     pub fn tool_validation(&self, tool_name: &str, params: &Value) -> Result<()> {
@@ -72,10 +86,13 @@ impl McpClient {
                     anyhow::anyhow!("Validation failed for tool {}: {}", tool_name, e)
                 })?;
                 Ok(())
-                
-            },
+            }
             None => {
-                return Err(anyhow::anyhow!("Tool {} not found in server {}", tool_name, self.server_name));
+                return Err(anyhow::anyhow!(
+                    "Tool {} not found in server {}",
+                    tool_name,
+                    self.server_name
+                ));
             }
         }
     }

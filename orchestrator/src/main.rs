@@ -1,18 +1,18 @@
-
 use std::{env, sync::Arc};
 use tokio::net::TcpListener;
 
-use anyhow::{Result};
+use anyhow::Result;
 use axum::{Router, routing::post};
+use tower_http::cors::CorsLayer;
 use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt};
 
-mod api;
 mod agent;
+mod api;
 mod mcp;
 
-pub use api::*;
 pub use agent::*;
+pub use api::*;
 pub use mcp::*;
 
 const AGENT_TESTING: bool = true;
@@ -28,20 +28,20 @@ fn init_tracing(level: &str) {
         .with_target(true)
         .with_level(true)
         .with_timer(fmt::time::time())
-        .try_init() {
-            Ok(_) => {
-                info!("Tracing initialized successfully!!!");
-            },
-            Err(e) => {
-                tracing::error!("Failed to initialize tracing: {}", e);
-                eprint!("Failed to initialize tracing: {}", e);
-            }
-        };
+        .try_init()
+    {
+        Ok(_) => {
+            info!("Tracing initialized successfully!!!");
+        }
+        Err(e) => {
+            tracing::error!("Failed to initialize tracing: {}", e);
+            eprint!("Failed to initialize tracing: {}", e);
+        }
+    };
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-
     // Config ENV
     dotenv::from_path("../.env").ok();
 
@@ -60,12 +60,13 @@ async fn main() -> Result<()> {
     let figma_sv = ServerConfig::new("figma");
 
     let clients = vec![roadmap_sv, lesson_sv, github_sv, figma_sv];
-    let state = Arc::new(AppState {clients});
+    let state = Arc::new(AppState { clients });
 
     // Config Server
     let app = Router::new()
-        .route("agent/run", post(agent_handler))
-        .with_state(state);
+        .route("/agent/run", post(agent_handler))
+        .with_state(state)
+        .layer(CorsLayer::permissive());
     let listener = TcpListener::bind(addr.clone()).await?;
 
     // Server Running
