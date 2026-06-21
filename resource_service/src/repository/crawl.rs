@@ -115,7 +115,7 @@ impl ResourceRepository {
         let row = client
             .query_opt(
                 "SELECT id, run_id, source_id, url, canonical_url, status::text,
-                        priority, attempts, max_attempts, last_error
+                        priority, depth, attempts, max_attempts, last_error
                  FROM resource_service.crawl_jobs
                  WHERE id = $1",
                 &[&id],
@@ -139,7 +139,7 @@ impl ResourceRepository {
         let rows = client
             .query(
                 "SELECT id, run_id, source_id, url, canonical_url, status::text,
-                        priority, attempts, max_attempts, last_error
+                        priority, depth, attempts, max_attempts, last_error
                  FROM resource_service.crawl_jobs
                  ORDER BY priority DESC, created_at DESC
                  LIMIT $1 OFFSET $2",
@@ -171,6 +171,14 @@ impl ResourceRepository {
         if affected == 0 {
             return Err(AppError::CrawlJobNotFound);
         }
+        insert_outbox_event(
+            &client,
+            "crawl_job.retry",
+            "crawl_job",
+            Some(id),
+            json!({"crawlJobId": id}),
+        )
+        .await?;
         self.get_crawl_job(id).await
     }
 
@@ -190,6 +198,14 @@ impl ResourceRepository {
         if affected == 0 {
             return Err(AppError::CrawlJobNotFound);
         }
+        insert_outbox_event(
+            &client,
+            "crawl_job.cancelled",
+            "crawl_job",
+            Some(id),
+            json!({"crawlJobId": id, "reason": "cancelled by admin"}),
+        )
+        .await?;
         self.get_crawl_job(id).await
     }
 
@@ -199,7 +215,7 @@ impl ResourceRepository {
         let rows = client
             .query(
                 "SELECT id, run_id, source_id, url, canonical_url, status::text,
-                        priority, attempts, max_attempts, last_error
+                        priority, depth, attempts, max_attempts, last_error
                  FROM resource_service.claim_crawl_jobs($1, $2)",
                 &[&request.worker_id, &limit],
             )
@@ -226,4 +242,21 @@ impl ResourceRepository {
             .await?;
         self.get_crawl_job(id).await
     }
+}
+
+async fn insert_outbox_event(
+    client: &tokio_postgres::Client,
+    event_type: &str,
+    aggregate_type: &str,
+    aggregate_id: Option<Uuid>,
+    payload: serde_json::Value,
+) -> AppResult<()> {
+    client
+        .execute(
+            "INSERT INTO resource_service.outbox_events(event_type, aggregate_type, aggregate_id, payload)
+             VALUES ($1, $2, $3, $4)",
+            &[&event_type, &aggregate_type, &aggregate_id, &Json(&payload)],
+        )
+        .await?;
+    Ok(())
 }

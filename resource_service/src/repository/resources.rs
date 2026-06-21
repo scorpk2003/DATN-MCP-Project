@@ -183,6 +183,24 @@ impl ResourceRepository {
             .await?
             .get(0);
 
+        let existing_chunk_count: i64 = tx
+            .query_one(
+                "SELECT count(*)::bigint
+                 FROM resource_service.resource_chunks
+                 WHERE version_id = $1",
+                &[&version_id],
+            )
+            .await?
+            .get(0);
+        if existing_chunk_count > 0 {
+            tx.commit().await?;
+            return Ok(IngestResourceResponse {
+                resource_id,
+                version_id,
+                chunk_count: existing_chunk_count as i32,
+            });
+        }
+
         let chunk_json = serde_json::to_value(chunks)
             .map_err(|err| AppError::Internal(format!("serialize chunks failed: {err}")))?;
         let chunk_count: i32 = tx

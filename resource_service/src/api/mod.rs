@@ -1,4 +1,5 @@
 mod admin;
+mod auth;
 mod embedding;
 mod enrichment;
 mod health;
@@ -11,6 +12,7 @@ use std::sync::Arc;
 
 use axum::{
     Router,
+    middleware::from_fn_with_state,
     routing::{get, post},
 };
 
@@ -165,5 +167,6 @@ pub fn router(service: Arc<ResourceService>) -> Router {
             "/admin/research/candidates/{id}/reject",
             post(research::reject_candidate),
         )
-        .with_state(service)
+        .with_state(service.clone())
+        .layer(from_fn_with_state(service, auth::internal_auth))
 }

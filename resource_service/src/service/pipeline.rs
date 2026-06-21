@@ -1,4 +1,5 @@
 use serde_json::json;
+use sha2::{Digest, Sha256};
 
 use crate::{
     AppResult,
@@ -27,6 +28,7 @@ impl ResourceService {
             artifact.content_type.as_deref(),
             &artifact.raw_body,
         )?;
+        let extracted_sha256 = sha256_hex(&extracted.content);
         let create_resource = CreateResourceRequest {
             title: extracted.title.clone(),
             canonical_url: extracted.canonical_url.clone(),
@@ -56,13 +58,22 @@ impl ResourceService {
             fetch_artifact_id: Some(artifact.id),
             metadata: Some(json!({
                 "extractorVersion": "resource_service_basic_extractor_v1",
-                "chunkingVersion": "section_aware_v1"
+                "chunkingVersion": "section_aware_v1",
+                "extractedSha256": extracted_sha256
             })),
         };
         let chunks = chunk_document(&version_request.content);
         let version = self
             .repository
             .create_resource_version(resource.resource_id, &version_request, &chunks)
+            .await?;
+        self.repository
+            .mark_fetch_artifact_extracted(
+                artifact.id,
+                resource.resource_id,
+                version.version_id,
+                version.chunk_count,
+            )
             .await?;
 
         if request.activate_resource.unwrap_or(true) {
@@ -81,6 +92,11 @@ impl ResourceService {
             canonical_url: create_resource.canonical_url,
         })
     }
+}
+
+fn sha256_hex(value: &str) -> String {
+    let digest = Sha256::digest(value.as_bytes());
+    digest.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
 fn resource_format_from_content_type(content_type: Option<&str>) -> String {

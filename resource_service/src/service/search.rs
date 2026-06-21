@@ -1,13 +1,15 @@
 use serde_json::json;
 use std::collections::HashMap;
+use tracing::warn;
 
 use crate::{
-    AppResult,
+    AppError, AppResult,
+    embedding_provider::{deterministic_embedding, vector_literal},
     models::{
         QueryInfo, RecommendRequest, RecommendResponse, SearchRequest, SearchResponse,
         SearchResult, TopicCoverageRequest, TopicCoverageResponse,
     },
-    repository::{coverage_for_results, normalize_query},
+    repository::{SearchEmbedding, coverage_for_results, normalize_query},
 };
 
 use super::{ResourceService, validation};
@@ -21,7 +23,26 @@ impl ResourceService {
         let mut candidate_request = request.clone();
         candidate_request.query = normalized.clone();
         candidate_request.limit = Some((requested_limit as i64 * 5).clamp(20, 50));
-        let mut results = self.repository.search_chunks(&candidate_request).await?;
+        let search_embedding = self
+            .search_embedding_for_query(&candidate_request.query)
+            .await;
+        let attempted_vector = search_embedding.is_some();
+        let mut strategy = search_strategy(&technical_tokens, attempted_vector);
+        let mut results = match self
+            .repository
+            .search_chunks_with_embedding(&candidate_request, search_embedding)
+            .await
+        {
+            Ok(results) => results,
+            Err(err) if attempted_vector && is_vector_search_error(&err) => {
+                warn!(error = %err, "vector search failed; retrying lexical fallback");
+                strategy = search_strategy(&technical_tokens, false);
+                self.repository
+                    .search_chunks_with_embedding(&candidate_request, None)
+                    .await?
+            }
+            Err(err) => return Err(err),
+        };
         apply_exact_token_boost(&mut results, &technical_tokens);
         let results = diversify_results(
             results,
@@ -65,11 +86,7 @@ impl ResourceService {
             coverage,
             query_info: QueryInfo {
                 normalized_query: normalized,
-                strategy: if technical_tokens.is_empty() {
-                    "hybrid".to_string()
-                } else {
-                    "hybrid_exact_boost".to_string()
-                },
+                strategy,
             },
         })
     }
@@ -169,6 +186,40 @@ impl ResourceService {
             coverage: recommendation.coverage,
         })
     }
+}
+
+impl ResourceService {
+    async fn search_embedding_for_query(&self, query: &str) -> Option<SearchEmbedding> {
+        let model = self.repository.get_default_embedding_model().await.ok()?;
+        if !model.supports_inline_pgvector() {
+            return None;
+        }
+        let vector = deterministic_embedding(query, model.dimensions as usize).ok()?;
+        let vector_literal = vector_literal(&vector).ok()?;
+        Some(SearchEmbedding {
+            model_id: model.id,
+            vector_literal,
+        })
+    }
+}
+
+fn search_strategy(technical_tokens: &[String], has_vector: bool) -> String {
+    match (technical_tokens.is_empty(), has_vector) {
+        (true, true) => "hybrid_vector".to_string(),
+        (false, true) => "hybrid_vector_exact_boost".to_string(),
+        (true, false) => "hybrid_lexical_fallback".to_string(),
+        (false, false) => "hybrid_lexical_exact_boost".to_string(),
+    }
+}
+
+fn is_vector_search_error(error: &AppError) -> bool {
+    if matches!(error, AppError::Database(_)) {
+        return true;
+    }
+    let message = error.to_string();
+    message.contains("operator does not exist")
+        || message.contains("type \"vector\" does not exist")
+        || message.contains("resource_service.vector")
 }
 
 fn select_recommended_resources(
@@ -310,5 +361,19 @@ mod tests {
         assert!(tokens.contains(&"useEffect".to_string()));
         assert!(tokens.contains(&"ON".to_string()));
         assert!(tokens.contains(&"CONFLICT".to_string()));
+    }
+
+    #[test]
+    fn search_strategy_reports_vector_or_lexical_fallback() {
+        assert_eq!(search_strategy(&[], true), "hybrid_vector");
+        assert_eq!(
+            search_strategy(&["useEffect".to_string()], true),
+            "hybrid_vector_exact_boost"
+        );
+        assert_eq!(search_strategy(&[], false), "hybrid_lexical_fallback");
+        assert_eq!(
+            search_strategy(&["useEffect".to_string()], false),
+            "hybrid_lexical_exact_boost"
+        );
     }
 }

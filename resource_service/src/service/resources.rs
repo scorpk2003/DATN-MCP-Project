@@ -22,6 +22,20 @@ impl ResourceService {
         self.repository.run_schema_migration().await
     }
 
+    pub async fn metrics_snapshot(&self) -> AppResult<serde_json::Value> {
+        self.repository.metrics_snapshot().await
+    }
+
+    pub async fn count_outbox_events(
+        &self,
+        event_type: &str,
+        aggregate_id: Option<Uuid>,
+    ) -> AppResult<i64> {
+        self.repository
+            .count_outbox_events(event_type, aggregate_id)
+            .await
+    }
+
     pub async fn create_resource(
         &self,
         request: CreateResourceRequest,

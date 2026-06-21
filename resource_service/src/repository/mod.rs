@@ -15,6 +15,7 @@ mod sources;
 
 use deadpool_postgres::Pool;
 
+pub(crate) use search::SearchEmbedding;
 pub use search::{coverage_for_results, normalize_query};
 
 #[derive(Clone)]

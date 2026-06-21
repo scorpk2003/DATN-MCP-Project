@@ -9,6 +9,7 @@ use tokio::{
 #[derive(Debug, Clone)]
 pub struct ResourceApiClient {
     endpoint: HttpEndpoint,
+    token: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -30,7 +31,16 @@ impl ResourceApiClient {
     pub fn new(base_url: impl Into<String>) -> Result<Self, ResourceApiError> {
         Ok(Self {
             endpoint: parse_base_url(&base_url.into())?,
+            token: None,
         })
+    }
+
+    pub fn with_token(mut self, token: Option<String>) -> Self {
+        self.token = token.and_then(|value| {
+            let value = value.trim().to_string();
+            (!value.is_empty()).then_some(value)
+        });
+        self
     }
 
     pub async fn get(&self, path: &str) -> Result<Value, ResourceApiError> {
@@ -48,11 +58,12 @@ impl ResourceApiClient {
         body: Option<Value>,
     ) -> Result<Value, ResourceApiError> {
         let body = body.map(|value| value.to_string()).unwrap_or_default();
-        let request = format!(
-            "{method} {path} HTTP/1.1\r\nHost: {}\r\nAccept: application/json\r\nContent-Type: application/json\r\nConnection: close\r\nContent-Length: {}\r\n\r\n{}",
-            self.endpoint.host,
-            body.len(),
-            body
+        let request = build_request(
+            method,
+            path,
+            &self.endpoint.host,
+            self.token.as_deref(),
+            &body,
         );
 
         let mut stream = TcpStream::connect((&self.endpoint.host[..], self.endpoint.port))
@@ -71,6 +82,16 @@ impl ResourceApiClient {
 
         parse_response(&response)
     }
+}
+
+fn build_request(method: &str, path: &str, host: &str, token: Option<&str>, body: &str) -> String {
+    let auth_header = token
+        .map(|token| format!("Authorization: Bearer {token}\r\n"))
+        .unwrap_or_default();
+    format!(
+        "{method} {path} HTTP/1.1\r\nHost: {host}\r\nAccept: application/json\r\nContent-Type: application/json\r\n{auth_header}Connection: close\r\nContent-Length: {}\r\n\r\n{body}",
+        body.len()
+    )
 }
 
 impl ResourceApiError {
@@ -186,10 +207,8 @@ fn unwrap_envelope(value: Value) -> Result<Value, ResourceApiError> {
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
-    use tokio::{io::AsyncReadExt, net::TcpListener};
-
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn parse_http_base_url() {
@@ -198,26 +217,29 @@ mod tests {
         assert_eq!(endpoint.port, 3200);
     }
 
-    #[tokio::test]
-    async fn unwraps_mock_resource_api_envelope() {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
+    #[test]
+    fn builds_authorized_request_without_logging_token_elsewhere() {
+        let request = build_request(
+            "POST",
+            "/search/resources",
+            "127.0.0.1",
+            Some("mcp-secret"),
+            "{}",
+        );
 
-        tokio::spawn(async move {
-            let (mut socket, _) = listener.accept().await.unwrap();
-            let mut buf = [0_u8; 1024];
-            let _ = socket.read(&mut buf).await.unwrap();
-            let body = json!({"success": true, "data": {"status": "good"}}).to_string();
-            let response = format!(
-                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-                body.len(),
-                body
-            );
-            socket.write_all(response.as_bytes()).await.unwrap();
-        });
+        assert!(request.contains("Authorization: Bearer mcp-secret\r\n"));
+        assert!(request.contains("Content-Length: 2\r\n"));
+    }
 
-        let client = ResourceApiClient::new(format!("http://{addr}")).unwrap();
-        let value = client.get("/coverage/topic").await.unwrap();
+    #[test]
+    fn unwraps_mock_resource_api_envelope() {
+        let body = json!({"success": true, "data": {"status": "good"}}).to_string();
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        let value = parse_response(response.as_bytes()).unwrap();
 
         assert_eq!(value["status"], "good");
     }

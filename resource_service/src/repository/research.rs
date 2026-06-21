@@ -86,8 +86,9 @@ impl ResourceRepository {
     }
 
     pub async fn update_gap_status(&self, id: Uuid, status: &str) -> AppResult<GapSummary> {
-        let client = self.pool.get().await?;
-        let row = client
+        let mut client = self.pool.get().await?;
+        let tx = client.transaction().await?;
+        let row = tx
             .query_opt(
                 "UPDATE resource_service.resource_gaps
                  SET status = CASE $2
@@ -106,6 +107,15 @@ impl ResourceRepository {
             )
             .await?
             .ok_or(AppError::GapNotFound)?;
+        insert_outbox_event(
+            &tx,
+            &format!("gap.{status}"),
+            "resource_gap",
+            Some(id),
+            json!({"gapId": id, "status": status}),
+        )
+        .await?;
+        tx.commit().await?;
         Ok(row_to_gap(&row))
     }
 
@@ -244,6 +254,19 @@ impl ResourceRepository {
         let seed_id = create_seed_for_candidate(&tx, source_id, &candidate).await?;
         let job_id = enqueue_candidate_job(&tx, source_id, seed_id, &candidate).await?;
         mark_gap_researching(&tx, candidate.task_id).await?;
+        insert_outbox_event(
+            &tx,
+            "research_candidate.approved",
+            "research_candidate",
+            Some(candidate.id),
+            json!({
+                "candidateId": candidate.id,
+                "researchTaskId": candidate.task_id,
+                "crawlSeedId": seed_id,
+                "crawlJobId": job_id
+            }),
+        )
+        .await?;
         tx.commit().await?;
 
         Ok(ApproveCandidateResponse {
@@ -310,8 +333,9 @@ impl ResourceRepository {
     }
 
     pub async fn reject_candidate(&self, id: Uuid, reason: &str) -> AppResult<CandidateSummary> {
-        let client = self.pool.get().await?;
-        let row = client
+        let mut client = self.pool.get().await?;
+        let tx = client.transaction().await?;
+        let row = tx
             .query_one(
                 "UPDATE resource_service.research_candidates
                  SET selected = false, reject_reason = $2
@@ -320,8 +344,38 @@ impl ResourceRepository {
                 &[&id, &reason],
             )
             .await?;
-        Ok(row_to_candidate(&row))
+        let candidate = row_to_candidate(&row);
+        insert_outbox_event(
+            &tx,
+            "research_candidate.rejected",
+            "research_candidate",
+            Some(candidate.id),
+            json!({
+                "candidateId": candidate.id,
+                "researchTaskId": candidate.task_id,
+                "reason": reason
+            }),
+        )
+        .await?;
+        tx.commit().await?;
+        Ok(candidate)
     }
+}
+
+async fn insert_outbox_event(
+    tx: &tokio_postgres::Transaction<'_>,
+    event_type: &str,
+    aggregate_type: &str,
+    aggregate_id: Option<Uuid>,
+    payload: serde_json::Value,
+) -> AppResult<()> {
+    tx.execute(
+        "INSERT INTO resource_service.outbox_events(event_type, aggregate_type, aggregate_id, payload)
+         VALUES ($1, $2, $3, $4)",
+        &[&event_type, &aggregate_type, &aggregate_id, &Json(&payload)],
+    )
+    .await?;
+    Ok(())
 }
 
 async fn ensure_source_for_candidate(

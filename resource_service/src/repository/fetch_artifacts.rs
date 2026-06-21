@@ -106,4 +106,55 @@ impl ResourceRepository {
             metadata: row.get("metadata"),
         })
     }
+
+    pub(crate) async fn list_unprocessed_fetch_artifact_ids(
+        &self,
+        limit: i64,
+    ) -> AppResult<Vec<uuid::Uuid>> {
+        let client = self.pool.get().await?;
+        let limit = limit.clamp(1, 100);
+        let rows = client
+            .query(
+                "SELECT fa.id
+                 FROM resource_service.fetch_artifacts fa
+                 LEFT JOIN resource_service.resource_versions rv
+                   ON rv.fetch_artifact_id = fa.id
+                 WHERE rv.id IS NULL
+                   AND fa.http_status BETWEEN 200 AND 399
+                   AND fa.raw_body IS NOT NULL
+                   AND fa.metadata->'extraction'->>'resourceVersionId' IS NULL
+                 ORDER BY fa.fetched_at ASC
+                 LIMIT $1",
+                &[&limit],
+            )
+            .await?;
+        Ok(rows.iter().map(|row| row.get("id")).collect())
+    }
+
+    pub(crate) async fn mark_fetch_artifact_extracted(
+        &self,
+        id: uuid::Uuid,
+        resource_id: uuid::Uuid,
+        version_id: uuid::Uuid,
+        chunk_count: i32,
+    ) -> AppResult<()> {
+        let client = self.pool.get().await?;
+        let marker = serde_json::json!({
+            "extraction": {
+                "resourceId": resource_id,
+                "resourceVersionId": version_id,
+                "chunkCount": chunk_count,
+                "processedAt": crate::models::utc_timestamp()
+            }
+        });
+        client
+            .execute(
+                "UPDATE resource_service.fetch_artifacts
+                 SET metadata = metadata || $2
+                 WHERE id = $1",
+                &[&id, &Json(&marker)],
+            )
+            .await?;
+        Ok(())
+    }
 }

@@ -12,6 +12,10 @@ pub type AppResult<T> = Result<T, AppError>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
+    #[error("authentication is required")]
+    Unauthorized,
+    #[error("permission denied")]
+    Forbidden,
     #[error("validation error: {0}")]
     Validation(String),
     #[error("bad request: {0}")]
@@ -37,6 +41,8 @@ pub enum AppError {
 impl AppError {
     pub fn code(&self) -> &'static str {
         match self {
+            AppError::Unauthorized => "UNAUTHORIZED",
+            AppError::Forbidden => "FORBIDDEN",
             AppError::Validation(_) | AppError::BadRequest(_) => "VALIDATION_ERROR",
             AppError::ResourceNotFound => "RESOURCE_NOT_FOUND",
             AppError::SourceNotFound => "SOURCE_NOT_FOUND",
@@ -51,6 +57,8 @@ impl AppError {
 
     fn status(&self) -> StatusCode {
         match self {
+            AppError::Unauthorized => StatusCode::UNAUTHORIZED,
+            AppError::Forbidden => StatusCode::FORBIDDEN,
             AppError::Validation(_) | AppError::BadRequest(_) => StatusCode::BAD_REQUEST,
             AppError::ResourceNotFound
             | AppError::SourceNotFound

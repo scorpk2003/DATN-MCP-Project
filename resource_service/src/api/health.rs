@@ -14,11 +14,10 @@ pub async fn ready(
     Ok(Json(ApiEnvelope::ok(service.health_check().await?)))
 }
 
-pub async fn metrics() -> AppResult<Json<ApiEnvelope<serde_json::Value>>> {
-    Ok(Json(ApiEnvelope::ok(serde_json::json!({
-        "format": "json",
-        "status": "metrics_placeholder"
-    }))))
+pub async fn metrics(
+    State(service): State<Arc<ResourceService>>,
+) -> AppResult<Json<ApiEnvelope<serde_json::Value>>> {
+    Ok(Json(ApiEnvelope::ok(service.metrics_snapshot().await?)))
 }
 
 pub async fn migrate(

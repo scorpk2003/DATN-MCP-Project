@@ -122,6 +122,10 @@ impl ResourceRepository {
         Ok(row_to_source(&row))
     }
 
+    pub(crate) async fn get_source_policy(&self, id: Uuid) -> AppResult<SourceSite> {
+        self.get_source(id).await
+    }
+
     pub async fn patch_source(
         &self,
         id: Uuid,

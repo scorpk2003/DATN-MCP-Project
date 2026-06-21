@@ -131,6 +131,7 @@ pub(crate) fn row_to_crawl_job(row: &Row) -> CrawlJob {
         canonical_url: row.get("canonical_url"),
         status: row.get("status"),
         priority: row.get("priority"),
+        depth: row.get("depth"),
         attempts: row.get("attempts"),
         max_attempts: row.get("max_attempts"),
         last_error: row.get("last_error"),

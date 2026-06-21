@@ -9,10 +9,23 @@ use crate::{
 
 use super::{ResourceRepository, mappers::row_to_search_result};
 
+pub(crate) struct SearchEmbedding {
+    pub model_id: Uuid,
+    pub vector_literal: String,
+}
+
 impl ResourceRepository {
     pub async fn search_chunks(&self, request: &SearchRequest) -> AppResult<Vec<SearchResult>> {
+        self.search_chunks_with_embedding(request, None).await
+    }
+
+    pub(crate) async fn search_chunks_with_embedding(
+        &self,
+        request: &SearchRequest,
+        embedding: Option<SearchEmbedding>,
+    ) -> AppResult<Vec<SearchResult>> {
         let client = self.pool.get().await?;
-        let limit = request.limit.unwrap_or(10).clamp(1, 50);
+        let limit = request.limit.unwrap_or(10).clamp(1, 50) as i32;
         let filters = request.filters.clone();
         let min_quality = filters
             .as_ref()
@@ -21,6 +34,8 @@ impl ResourceRepository {
             .clamp(0.0, 1.0);
         let language = filters.as_ref().and_then(|f| f.language.clone());
         let candidate_limit = (limit * 10).max(50);
+        let query_vector = embedding.as_ref().map(|value| value.vector_literal.clone());
+        let model_id = embedding.as_ref().map(|value| value.model_id);
 
         let rows = client
             .query(
@@ -31,11 +46,13 @@ impl ResourceRepository {
                     hs.freshness_score::double precision,
                     COALESCE(c.metadata->>'content_kind', 'mixed') AS content_kind
                  FROM resource_service.hybrid_search_chunks(
-                    $1, NULL, NULL, NULL, NULL, $2, $3, false, $4, $5
+                    $1, CAST($2::text AS resource_service.vector), $3, NULL, NULL, $4, CAST($5::float8 AS numeric), false, $6, $7
                  ) hs
                  JOIN resource_service.resource_chunks c ON c.id = hs.chunk_id",
                 &[
                     &request.query,
+                    &query_vector,
+                    &model_id,
                     &language,
                     &min_quality,
                     &candidate_limit,

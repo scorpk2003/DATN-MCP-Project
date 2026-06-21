@@ -119,6 +119,7 @@ pub struct CrawlJob {
     pub canonical_url: String,
     pub status: String,
     pub priority: i32,
+    pub depth: i32,
     pub attempts: i32,
     #[serde(rename = "maxAttempts")]
     pub max_attempts: i32,

@@ -47,8 +47,9 @@ pub struct ResourceMcpServer {
 impl ResourceMcpServer {
     pub fn new() -> Self {
         let config = ServerConfig::default();
-        let client =
-            ResourceApiClient::new(config.resource_service_base_url.clone()).map_err(Arc::new);
+        let client = ResourceApiClient::new(config.resource_service_base_url.clone())
+            .map(|client| client.with_token(config.resource_service_mcp_token.clone()))
+            .map_err(Arc::new);
 
         Self {
             config,

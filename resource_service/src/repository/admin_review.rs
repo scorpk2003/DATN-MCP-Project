@@ -116,6 +116,19 @@ impl ResourceRepository {
             .ok_or(AppError::ResourceNotFound)?;
         insert_resource_issue(&tx, resource_id, issue_type, request).await?;
         insert_quality_event(&tx, resource_id, issue_type, request, json!({})).await?;
+        insert_outbox_event(
+            &tx,
+            &format!("admin.resource.{issue_type}"),
+            "resource",
+            Some(resource_id),
+            json!({
+                "resourceId": resource_id,
+                "action": issue_type,
+                "actorId": request.actor_id,
+                "reason": request.reason
+            }),
+        )
+        .await?;
         tx.commit().await?;
         Ok(AdminResourceActionResponse {
             resource_id: row.get("id"),
@@ -161,6 +174,19 @@ impl ResourceRepository {
             json!({"adjustment": if boost { 0.1 } else { -0.1 }}),
         )
         .await?;
+        insert_outbox_event(
+            &tx,
+            &format!("admin.resource.{action}"),
+            "resource",
+            Some(resource_id),
+            json!({
+                "resourceId": resource_id,
+                "action": action,
+                "actorId": request.actor_id,
+                "reason": request.reason
+            }),
+        )
+        .await?;
         tx.commit().await?;
         Ok(AdminResourceActionResponse {
             resource_id: row.get("id"),
@@ -169,6 +195,22 @@ impl ResourceRepository {
             quality_score: row.get("quality_score"),
         })
     }
+}
+
+async fn insert_outbox_event(
+    tx: &tokio_postgres::Transaction<'_>,
+    event_type: &str,
+    aggregate_type: &str,
+    aggregate_id: Option<Uuid>,
+    payload: serde_json::Value,
+) -> AppResult<()> {
+    tx.execute(
+        "INSERT INTO resource_service.outbox_events(event_type, aggregate_type, aggregate_id, payload)
+         VALUES ($1, $2, $3, $4)",
+        &[&event_type, &aggregate_type, &aggregate_id, &Json(&payload)],
+    )
+    .await?;
+    Ok(())
 }
 
 async fn count_one(client: &tokio_postgres::Client, sql: &str) -> AppResult<i64> {

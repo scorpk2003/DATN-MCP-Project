@@ -1,0 +1,315 @@
+{
+  "version": "resource-platform-v0.2",
+  "description": "Deterministic evaluation topics for search, recommend, coverage, and gap behavior.",
+  "metrics": [
+    "top_k_relevance",
+    "official_source_priority",
+    "duplicate_rate",
+    "coverage_accuracy",
+    "gap_creation_accuracy",
+    "recommendation_diversity",
+    "no_hallucinated_resource"
+  ],
+  "topics": [
+    {
+      "topic": "React useEffect cleanup",
+      "group": "popular",
+      "level": "intermediate",
+      "expectedCoverage": "good",
+      "requiredTypes": ["official_reference", "primary_learning", "practice"],
+      "expectedOfficialDomains": ["react.dev"],
+      "expectedMinResources": 3,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "SQL joins",
+      "group": "popular",
+      "level": "beginner",
+      "expectedCoverage": "good",
+      "requiredTypes": ["official_reference", "primary_learning", "practice"],
+      "expectedOfficialDomains": ["postgresql.org", "developer.mozilla.org"],
+      "expectedMinResources": 3,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "Docker basics",
+      "group": "popular",
+      "level": "beginner",
+      "expectedCoverage": "good",
+      "requiredTypes": ["official_reference", "primary_learning", "practice"],
+      "expectedOfficialDomains": ["docs.docker.com"],
+      "expectedMinResources": 3,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "Git branching",
+      "group": "popular",
+      "level": "beginner",
+      "expectedCoverage": "partial",
+      "requiredTypes": ["official_reference", "primary_learning", "practice"],
+      "expectedOfficialDomains": ["git-scm.com"],
+      "expectedMinResources": 2,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "REST API design",
+      "group": "popular",
+      "level": "intermediate",
+      "expectedCoverage": "partial",
+      "requiredTypes": ["official_reference", "primary_learning", "project"],
+      "expectedOfficialDomains": ["developer.mozilla.org"],
+      "expectedMinResources": 2,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "PostgreSQL indexing",
+      "group": "intermediate",
+      "level": "intermediate",
+      "expectedCoverage": "good",
+      "requiredTypes": ["official_reference", "primary_learning", "deep_dive"],
+      "expectedOfficialDomains": ["postgresql.org"],
+      "expectedMinResources": 3,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "Redis caching",
+      "group": "intermediate",
+      "level": "intermediate",
+      "expectedCoverage": "partial",
+      "requiredTypes": ["official_reference", "primary_learning", "project"],
+      "expectedOfficialDomains": ["redis.io"],
+      "expectedMinResources": 2,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "OAuth2 authorization code flow",
+      "group": "intermediate",
+      "level": "intermediate",
+      "expectedCoverage": "partial",
+      "requiredTypes": ["official_reference", "primary_learning", "security"],
+      "expectedOfficialDomains": ["oauth.net", "datatracker.ietf.org"],
+      "expectedMinResources": 2,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "Message queue retry pattern",
+      "group": "intermediate",
+      "level": "intermediate",
+      "expectedCoverage": "partial",
+      "requiredTypes": ["primary_learning", "practice", "project"],
+      "expectedOfficialDomains": [],
+      "expectedMinResources": 2,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "Rust ownership",
+      "group": "intermediate",
+      "level": "beginner",
+      "expectedCoverage": "good",
+      "requiredTypes": ["official_reference", "primary_learning", "practice"],
+      "expectedOfficialDomains": ["doc.rust-lang.org"],
+      "expectedMinResources": 3,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "PostgreSQL logical decoding with Debezium",
+      "group": "niche",
+      "level": "advanced",
+      "expectedCoverage": "partial",
+      "requiredTypes": ["official_reference", "deep_dive", "project"],
+      "expectedOfficialDomains": ["postgresql.org", "debezium.io"],
+      "expectedMinResources": 2,
+      "expectedGapCreated": true
+    },
+    {
+      "topic": "eBPF tracing basics",
+      "group": "niche",
+      "level": "advanced",
+      "expectedCoverage": "poor",
+      "requiredTypes": ["official_reference", "primary_learning", "practice"],
+      "expectedOfficialDomains": ["ebpf.io", "kernel.org"],
+      "expectedMinResources": 2,
+      "expectedGapCreated": true
+    },
+    {
+      "topic": "Rust async Pin Unpin",
+      "group": "niche",
+      "level": "advanced",
+      "expectedCoverage": "partial",
+      "requiredTypes": ["official_reference", "deep_dive", "practice"],
+      "expectedOfficialDomains": ["doc.rust-lang.org"],
+      "expectedMinResources": 2,
+      "expectedGapCreated": true
+    },
+    {
+      "topic": "Kafka exactly-once semantics",
+      "group": "niche",
+      "level": "advanced",
+      "expectedCoverage": "partial",
+      "requiredTypes": ["official_reference", "deep_dive", "project"],
+      "expectedOfficialDomains": ["kafka.apache.org"],
+      "expectedMinResources": 2,
+      "expectedGapCreated": true
+    },
+    {
+      "topic": "Linux io_uring",
+      "group": "niche",
+      "level": "advanced",
+      "expectedCoverage": "poor",
+      "requiredTypes": ["official_reference", "deep_dive", "practice"],
+      "expectedOfficialDomains": ["kernel.org", "man7.org"],
+      "expectedMinResources": 2,
+      "expectedGapCreated": true
+    },
+    {
+      "topic": "Build authentication system",
+      "group": "project",
+      "level": "intermediate",
+      "expectedCoverage": "partial",
+      "requiredTypes": ["primary_learning", "practice", "project", "security"],
+      "expectedOfficialDomains": ["developer.mozilla.org", "owasp.org"],
+      "expectedMinResources": 3,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "Build job queue service",
+      "group": "project",
+      "level": "intermediate",
+      "expectedCoverage": "partial",
+      "requiredTypes": ["primary_learning", "practice", "project"],
+      "expectedOfficialDomains": [],
+      "expectedMinResources": 2,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "Build file upload service",
+      "group": "project",
+      "level": "intermediate",
+      "expectedCoverage": "partial",
+      "requiredTypes": ["primary_learning", "practice", "project", "security"],
+      "expectedOfficialDomains": ["developer.mozilla.org", "owasp.org"],
+      "expectedMinResources": 2,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "Build web crawler",
+      "group": "project",
+      "level": "advanced",
+      "expectedCoverage": "partial",
+      "requiredTypes": ["official_reference", "primary_learning", "project"],
+      "expectedOfficialDomains": ["robotstxt.org", "developer.mozilla.org"],
+      "expectedMinResources": 2,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "Build roadmap generator",
+      "group": "project",
+      "level": "advanced",
+      "expectedCoverage": "poor",
+      "requiredTypes": ["primary_learning", "project", "deep_dive"],
+      "expectedOfficialDomains": [],
+      "expectedMinResources": 2,
+      "expectedGapCreated": true
+    },
+    {
+      "topic": "TypeScript generics",
+      "group": "popular",
+      "level": "intermediate",
+      "expectedCoverage": "good",
+      "requiredTypes": ["official_reference", "primary_learning", "practice"],
+      "expectedOfficialDomains": ["typescriptlang.org"],
+      "expectedMinResources": 3,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "Kubernetes deployments",
+      "group": "intermediate",
+      "level": "intermediate",
+      "expectedCoverage": "partial",
+      "requiredTypes": ["official_reference", "primary_learning", "practice"],
+      "expectedOfficialDomains": ["kubernetes.io"],
+      "expectedMinResources": 2,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "Python async await",
+      "group": "popular",
+      "level": "intermediate",
+      "expectedCoverage": "good",
+      "requiredTypes": ["official_reference", "primary_learning", "practice"],
+      "expectedOfficialDomains": ["docs.python.org"],
+      "expectedMinResources": 3,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "Node.js streams",
+      "group": "intermediate",
+      "level": "advanced",
+      "expectedCoverage": "partial",
+      "requiredTypes": ["official_reference", "primary_learning", "practice"],
+      "expectedOfficialDomains": ["nodejs.org"],
+      "expectedMinResources": 2,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "Database transaction isolation",
+      "group": "intermediate",
+      "level": "advanced",
+      "expectedCoverage": "partial",
+      "requiredTypes": ["official_reference", "deep_dive", "practice"],
+      "expectedOfficialDomains": ["postgresql.org"],
+      "expectedMinResources": 2,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "CSS flexbox layout",
+      "group": "popular",
+      "level": "beginner",
+      "expectedCoverage": "good",
+      "requiredTypes": ["official_reference", "primary_learning", "practice"],
+      "expectedOfficialDomains": ["developer.mozilla.org"],
+      "expectedMinResources": 3,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "GraphQL schema design",
+      "group": "intermediate",
+      "level": "intermediate",
+      "expectedCoverage": "partial",
+      "requiredTypes": ["official_reference", "primary_learning", "project"],
+      "expectedOfficialDomains": ["graphql.org"],
+      "expectedMinResources": 2,
+      "expectedGapCreated": false
+    },
+    {
+      "topic": "OpenTelemetry tracing",
+      "group": "niche",
+      "level": "advanced",
+      "expectedCoverage": "partial",
+      "requiredTypes": ["official_reference", "deep_dive", "practice"],
+      "expectedOfficialDomains": ["opentelemetry.io"],
+      "expectedMinResources": 2,
+      "expectedGapCreated": true
+    },
+    {
+      "topic": "WebAssembly component model",
+      "group": "niche",
+      "level": "advanced",
+      "expectedCoverage": "poor",
+      "requiredTypes": ["official_reference", "deep_dive", "project"],
+      "expectedOfficialDomains": ["component-model.bytecodealliance.org", "webassembly.org"],
+      "expectedMinResources": 2,
+      "expectedGapCreated": true
+    },
+    {
+      "topic": "Build MCP server",
+      "group": "project",
+      "level": "advanced",
+      "expectedCoverage": "poor",
+      "requiredTypes": ["official_reference", "primary_learning", "project"],
+      "expectedOfficialDomains": ["modelcontextprotocol.io"],
+      "expectedMinResources": 2,
+      "expectedGapCreated": true
+    }
+  ]
+}

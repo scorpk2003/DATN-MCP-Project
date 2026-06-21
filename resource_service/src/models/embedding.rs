@@ -23,6 +23,12 @@ pub struct EmbeddingModelSummary {
     pub is_default: bool,
 }
 
+impl EmbeddingModelSummary {
+    pub fn supports_inline_pgvector(&self) -> bool {
+        self.dimensions == 1536
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct PendingEmbeddingChunksQuery {
     #[serde(rename = "embeddingModelId")]
