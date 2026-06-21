@@ -213,6 +213,13 @@ pub(crate) fn row_to_research_task(row: &Row) -> crate::models::ResearchTaskSumm
 }
 
 pub(crate) fn row_to_candidate(row: &Row) -> CandidateSummary {
+    let metadata: Value = row.get("metadata");
+    let candidate_type = metadata
+        .get("candidateType")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown")
+        .to_string();
+    let score = metadata.get("score").and_then(Value::as_f64).unwrap_or(0.0);
     CandidateSummary {
         id: row.get("id"),
         task_id: row.get("task_id"),
@@ -221,7 +228,9 @@ pub(crate) fn row_to_candidate(row: &Row) -> CandidateSummary {
         title: row.get("title"),
         selected: row.get("selected"),
         reject_reason: row.get("reject_reason"),
-        metadata: row.get("metadata"),
+        metadata,
+        candidate_type,
+        score,
     }
 }
 

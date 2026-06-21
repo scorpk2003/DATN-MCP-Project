@@ -27,6 +27,16 @@ pub struct ReportGapRequest {
     pub reason: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct ReportGapResponse {
+    #[serde(rename = "gapId")]
+    pub gap_id: Option<Uuid>,
+    pub created: bool,
+    pub status: String,
+    #[serde(rename = "researchTaskId")]
+    pub research_task_id: Option<Uuid>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct ResearchTaskRequest {
     pub topic: String,
@@ -61,6 +71,25 @@ pub struct CandidateRequest {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct CandidateScoringDetails {
+    #[serde(rename = "relevanceScore")]
+    pub relevance_score: f64,
+    #[serde(rename = "authorityScore")]
+    pub authority_score: f64,
+    #[serde(rename = "freshnessScore")]
+    pub freshness_score: f64,
+    #[serde(rename = "contentDepthScore")]
+    pub content_depth_score: f64,
+    #[serde(rename = "duplicatePenalty")]
+    pub duplicate_penalty: f64,
+    #[serde(rename = "languageMatchScore")]
+    pub language_match_score: f64,
+    #[serde(rename = "finalScore")]
+    pub final_score: f64,
+    pub reasons: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct CandidateSummary {
     #[serde(rename = "candidateId")]
     pub id: Uuid,
@@ -74,9 +103,54 @@ pub struct CandidateSummary {
     #[serde(rename = "rejectReason")]
     pub reject_reason: Option<String>,
     pub metadata: Value,
+    #[serde(rename = "candidateType")]
+    pub candidate_type: String,
+    pub score: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ApproveCandidateResponse {
+    pub candidate: CandidateSummary,
+    #[serde(rename = "createdCrawlSeedId")]
+    pub created_crawl_seed_id: Option<Uuid>,
+    #[serde(rename = "createdCrawlJobId")]
+    pub created_crawl_job_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct RejectCandidateRequest {
     pub reason: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AdminResourceActionRequest {
+    pub reason: Option<String>,
+    #[serde(rename = "actorId")]
+    pub actor_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AdminDashboardSummary {
+    #[serde(rename = "failedJobs")]
+    pub failed_jobs: i64,
+    #[serde(rename = "openGaps")]
+    pub open_gaps: i64,
+    #[serde(rename = "pendingCandidates")]
+    pub pending_candidates: i64,
+    #[serde(rename = "resourcesNeedReview")]
+    pub resources_need_review: i64,
+    #[serde(rename = "outdatedResources")]
+    pub outdated_resources: i64,
+    #[serde(rename = "lastCrawlRunStatus")]
+    pub last_crawl_run_status: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AdminResourceActionResponse {
+    #[serde(rename = "resourceId")]
+    pub resource_id: Uuid,
+    pub action: String,
+    pub status: String,
+    #[serde(rename = "qualityScore")]
+    pub quality_score: Option<f64>,
 }

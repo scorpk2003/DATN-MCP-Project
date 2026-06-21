@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "database_sv",
-    "roadmap_sv"
+    "roadmap_sv",
+    "resource_sv"
 ]
 
 [workspace.dependencies]

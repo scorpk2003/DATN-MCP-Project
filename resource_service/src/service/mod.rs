@@ -1,3 +1,4 @@
+mod admin;
 mod embedding;
 mod enrichment;
 mod pipeline;

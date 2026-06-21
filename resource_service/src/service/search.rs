@@ -35,7 +35,8 @@ impl ResourceService {
         let min_results = self.config.search_low_confidence_min_results;
         let needs_gap = results.len() < min_results || best_score < 0.65;
         let gap_id = if needs_gap && request.create_gap_on_low_confidence.unwrap_or(true) {
-            self.repository
+            let gap_id = self
+                .repository
                 .create_gap_if_low_results(
                     "resource_service_api",
                     &request.query,
@@ -47,7 +48,14 @@ impl ResourceService {
                         "technicalTokens": technical_tokens,
                     }),
                 )
-                .await?
+                .await?;
+            if let Some(gap_id) = gap_id {
+                let _ = self
+                    .repository
+                    .create_research_task_for_gap(gap_id, &request.query, &[])
+                    .await?;
+            }
+            gap_id
         } else {
             None
         };
@@ -98,7 +106,8 @@ impl ResourceService {
             .cloned()
             .collect();
         let gap_id = if resources.len() < 2 || best_score < 0.65 || !missing_types.is_empty() {
-            self.repository
+            let gap_id = self
+                .repository
                 .create_gap_if_low_results(
                     "resource_service_api",
                     &request.topic,
@@ -111,7 +120,14 @@ impl ResourceService {
                         "goal": request.goal,
                     }),
                 )
-                .await?
+                .await?;
+            if let Some(gap_id) = gap_id {
+                let _ = self
+                    .repository
+                    .create_research_task_for_gap(gap_id, &request.topic, &missing_types)
+                    .await?;
+            }
+            gap_id
         } else {
             None
         };

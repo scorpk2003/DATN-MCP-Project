@@ -88,11 +88,17 @@ pub fn router(service: Arc<ResourceService>) -> Router {
         )
         .route("/gaps", get(research::list_gaps).post(research::report_gap))
         .route("/gaps/{id}", get(research::get_gap))
-        .route("/research/tasks", post(research::create_research_task))
+        .route("/gaps/{id}/resolve", post(research::resolve_gap))
+        .route(
+            "/research/tasks",
+            get(research::list_research_tasks).post(research::create_research_task),
+        )
+        .route("/research/tasks/{id}", get(research::get_research_task))
         .route(
             "/research/candidates",
             get(research::list_candidates).post(research::create_candidate),
         )
+        .route("/research/candidates/{id}", get(research::get_candidate))
         .route(
             "/research/candidates/{id}/approve",
             post(research::approve_candidate),
@@ -109,10 +115,27 @@ pub fn router(service: Arc<ResourceService>) -> Router {
             "/admin/sources/{id}",
             get(source_crawl::get_source).patch(source_crawl::patch_source),
         )
+        .route("/admin/dashboard", get(admin::dashboard_summary))
         .route("/admin/crawl/jobs", get(admin::list_crawl_jobs))
         .route(
             "/admin/resources/{id}/enrich",
             post(enrichment::enrich_resource),
+        )
+        .route(
+            "/admin/resources/{id}/mark-outdated",
+            post(admin::mark_resource_outdated),
+        )
+        .route(
+            "/admin/resources/{id}/mark-needs-review",
+            post(admin::mark_resource_needs_review),
+        )
+        .route(
+            "/admin/resources/{id}/boost",
+            post(admin::boost_resource_quality),
+        )
+        .route(
+            "/admin/resources/{id}/deboost",
+            post(admin::deboost_resource_quality),
         )
         .route("/admin/crawl/schedule", post(source_crawl::schedule_crawl))
         .route("/admin/crawl/jobs/{id}/retry", post(admin::retry_crawl_job))
@@ -122,7 +145,18 @@ pub fn router(service: Arc<ResourceService>) -> Router {
         )
         .route("/admin/gaps", get(research::list_gaps))
         .route("/admin/gaps/{id}", get(research::get_gap))
+        .route("/admin/gaps/{id}/ignore", post(research::ignore_gap))
+        .route("/admin/gaps/{id}/reopen", post(research::reopen_gap))
         .route("/admin/research/candidates", get(research::list_candidates))
+        .route("/admin/research/tasks", get(research::list_research_tasks))
+        .route(
+            "/admin/research/tasks/{id}",
+            get(research::get_research_task),
+        )
+        .route(
+            "/admin/research/candidates/{id}",
+            get(research::get_candidate),
+        )
         .route(
             "/admin/research/candidates/{id}/approve",
             post(research::approve_candidate),

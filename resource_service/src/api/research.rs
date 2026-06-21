@@ -28,15 +28,32 @@ pub async fn get_gap(
     Ok(Json(ApiEnvelope::ok(service.get_gap(id).await?)))
 }
 
+pub async fn ignore_gap(
+    State(service): State<Arc<ResourceService>>,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<ApiEnvelope<crate::models::GapSummary>>> {
+    Ok(Json(ApiEnvelope::ok(service.ignore_gap(id).await?)))
+}
+
+pub async fn reopen_gap(
+    State(service): State<Arc<ResourceService>>,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<ApiEnvelope<crate::models::GapSummary>>> {
+    Ok(Json(ApiEnvelope::ok(service.reopen_gap(id).await?)))
+}
+
+pub async fn resolve_gap(
+    State(service): State<Arc<ResourceService>>,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<ApiEnvelope<crate::models::GapSummary>>> {
+    Ok(Json(ApiEnvelope::ok(service.resolve_gap(id).await?)))
+}
+
 pub async fn report_gap(
     State(service): State<Arc<ResourceService>>,
     Json(payload): Json<ReportGapRequest>,
-) -> AppResult<Json<ApiEnvelope<serde_json::Value>>> {
-    let gap_id = service.report_gap(payload).await?;
-    Ok(Json(ApiEnvelope::ok(serde_json::json!({
-        "gapId": gap_id,
-        "status": "pending"
-    }))))
+) -> AppResult<Json<ApiEnvelope<crate::models::ReportGapResponse>>> {
+    Ok(Json(ApiEnvelope::ok(service.report_gap(payload).await?)))
 }
 
 pub async fn create_research_task(
@@ -46,6 +63,22 @@ pub async fn create_research_task(
     Ok(Json(ApiEnvelope::ok(
         service.create_research_task(payload).await?,
     )))
+}
+
+pub async fn list_research_tasks(
+    State(service): State<Arc<ResourceService>>,
+    Query(query): Query<PageQuery>,
+) -> AppResult<Json<ApiEnvelope<crate::models::Page<crate::models::ResearchTaskSummary>>>> {
+    Ok(Json(ApiEnvelope::ok(
+        service.list_research_tasks(query).await?,
+    )))
+}
+
+pub async fn get_research_task(
+    State(service): State<Arc<ResourceService>>,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<ApiEnvelope<crate::models::ResearchTaskSummary>>> {
+    Ok(Json(ApiEnvelope::ok(service.get_research_task(id).await?)))
 }
 
 pub async fn create_candidate(
@@ -64,10 +97,17 @@ pub async fn list_candidates(
     Ok(Json(ApiEnvelope::ok(service.list_candidates(query).await?)))
 }
 
-pub async fn approve_candidate(
+pub async fn get_candidate(
     State(service): State<Arc<ResourceService>>,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<ApiEnvelope<crate::models::CandidateSummary>>> {
+    Ok(Json(ApiEnvelope::ok(service.get_candidate(id).await?)))
+}
+
+pub async fn approve_candidate(
+    State(service): State<Arc<ResourceService>>,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<ApiEnvelope<crate::models::ApproveCandidateResponse>>> {
     Ok(Json(ApiEnvelope::ok(service.approve_candidate(id).await?)))
 }
 

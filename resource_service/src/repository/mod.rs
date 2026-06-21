@@ -1,3 +1,4 @@
+mod admin_review;
 mod crawl;
 mod embedding;
 pub(crate) mod enrichment;
