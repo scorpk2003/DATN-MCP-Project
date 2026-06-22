@@ -1,0 +1,63 @@
+{
+  "analyzeNode": {
+    "userId": "user-sql-joins",
+    "roadmapId": "roadmap-backend",
+    "roadmapNodeId": "node-sql-joins",
+    "node": {
+      "title": "SQL Joins",
+      "topic": "SQL joins",
+      "description": "Combine rows from multiple tables using join operations.",
+      "level": "beginner",
+      "prerequisites": ["SQL basics"],
+      "expectedOutcomes": [
+        "Write inner join queries",
+        "Explain when to use left joins"
+      ]
+    },
+    "userContext": {
+      "skillLevel": "beginner",
+      "knownTopics": ["SQL basics"],
+      "weakTopics": [],
+      "learningGoal": "Backend development"
+    }
+  },
+  "resources": [
+    {
+      "id": "resource-sql-joins-docs",
+      "title": "SQL joins documentation",
+      "url": "https://example.com/sql-joins",
+      "sourceType": "docs",
+      "summary": "INNER JOIN returns rows with matching values in both tables. LEFT JOIN keeps all rows from the left table.",
+      "chunks": [
+        {
+          "chunkId": "chunk-inner-join",
+          "text": "Use INNER JOIN to write queries that combine matching rows across two tables.",
+          "score": 0.95
+        },
+        {
+          "chunkId": "chunk-left-join",
+          "text": "Use LEFT JOIN when you need every row from the left table and matching rows from the right table.",
+          "score": 0.91
+        }
+      ],
+      "qualityScore": 0.9,
+      "relevanceScore": 0.92
+    },
+    {
+      "id": "resource-sql-joins-article",
+      "title": "SQL join examples",
+      "url": "https://example.com/sql-join-examples",
+      "sourceType": "article",
+      "summary": "Practical SQL join examples for beginner database learners.",
+      "chunks": [
+        {
+          "chunkId": "chunk-examples",
+          "text": "A join example should name both tables, the join key, and the expected output rows.",
+          "score": 0.84
+        }
+      ],
+      "qualityScore": 0.82,
+      "relevanceScore": 0.86
+    }
+  ]
+}

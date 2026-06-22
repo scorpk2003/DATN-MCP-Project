@@ -9,8 +9,8 @@ use uuid::Uuid;
 use crate::{
     AppResult, ResourceService,
     models::{
-        ApiEnvelope, CandidateRequest, PageQuery, RejectCandidateRequest, ReportGapRequest,
-        ResearchTaskRequest,
+        ApiEnvelope, CandidateRequest, GitHubDiscoveryRequest, PageQuery, RejectCandidateRequest,
+        ReportGapRequest, ResearchTaskRequest,
     },
 };
 
@@ -79,6 +79,16 @@ pub async fn get_research_task(
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<ApiEnvelope<crate::models::ResearchTaskSummary>>> {
     Ok(Json(ApiEnvelope::ok(service.get_research_task(id).await?)))
+}
+
+pub async fn discover_github_candidates(
+    State(service): State<Arc<ResourceService>>,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<GitHubDiscoveryRequest>,
+) -> AppResult<Json<ApiEnvelope<crate::models::GitHubDiscoveryResponse>>> {
+    Ok(Json(ApiEnvelope::ok(
+        service.discover_github_candidates(id, payload).await?,
+    )))
 }
 
 pub async fn create_candidate(

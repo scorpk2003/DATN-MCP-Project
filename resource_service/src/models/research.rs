@@ -108,6 +108,26 @@ pub struct CandidateSummary {
     pub score: f64,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct GitHubDiscoveryRequest {
+    pub query: Option<String>,
+    pub language: Option<String>,
+    #[serde(rename = "minStars")]
+    pub min_stars: Option<u32>,
+    pub limit: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct GitHubDiscoveryResponse {
+    #[serde(rename = "researchTaskId")]
+    pub research_task_id: Uuid,
+    pub provider: String,
+    pub query: String,
+    #[serde(rename = "createdCandidateCount")]
+    pub created_candidate_count: usize,
+    pub candidates: Vec<CandidateSummary>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct ApproveCandidateResponse {
     pub candidate: CandidateSummary,

@@ -7,6 +7,7 @@ pub struct AppConfig {
     pub search_low_confidence_min_results: usize,
     pub auth: AuthConfig,
     pub worker: WorkerConfig,
+    pub github: GitHubConfig,
 }
 
 #[derive(Debug, Clone)]
@@ -34,6 +35,14 @@ pub struct WorkerConfig {
     pub poll_interval_ms: u64,
     pub http_timeout_ms: u64,
     pub max_body_bytes: usize,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct GitHubConfig {
+    pub token: Option<String>,
+    pub api_base_url: String,
+    pub timeout_ms: u64,
+    pub max_candidates: u32,
 }
 
 impl AppConfig {
@@ -81,6 +90,16 @@ impl AppConfig {
                 max_body_bytes: env_or("RESOURCE_WORKER_MAX_BODY_BYTES", "2097152")
                     .parse()
                     .unwrap_or(2 * 1024 * 1024),
+            },
+            github: GitHubConfig {
+                token: env_optional("GITHUB_API").or_else(|| env_optional("GITHUB_TOKEN")),
+                api_base_url: env_or("GITHUB_API_BASE_URL", "https://api.github.com"),
+                timeout_ms: env_or("GITHUB_API_TIMEOUT_MS", "10000")
+                    .parse()
+                    .unwrap_or(10000),
+                max_candidates: env_or("GITHUB_DISCOVERY_MAX_CANDIDATES", "10")
+                    .parse()
+                    .unwrap_or(10),
             },
         }
     }

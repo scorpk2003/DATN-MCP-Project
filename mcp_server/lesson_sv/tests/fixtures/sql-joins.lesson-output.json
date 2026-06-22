@@ -1,0 +1,13 @@
+{
+  "status": "ready",
+  "minimumExpectations": {
+    "topic": "SQL joins",
+    "level": "beginner",
+    "minContentBlocks": 6,
+    "minResources": 1,
+    "minExercises": 1,
+    "minQuizzes": 1,
+    "validationStatus": "passed",
+    "completionStatus": "completed"
+  }
+}

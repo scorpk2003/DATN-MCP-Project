@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "database_sv",
+    "lesson_sv",
     "roadmap_sv",
     "resource_sv"
 ]

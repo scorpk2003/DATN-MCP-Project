@@ -2,6 +2,7 @@ use uuid::Uuid;
 
 use crate::{
     AppResult,
+    corpus::infer_resource_role,
     models::{EnrichResourceRequest, EnrichResourceResponse, EnrichmentMatch},
     repository::{
         enrichment::{EnrichmentInput, EnrichmentWrite, EnrichmentWriteMatch},
@@ -216,9 +217,10 @@ fn estimate_difficulty(text: &str) -> String {
 
 fn classify_roles(text: &str, input: &EnrichmentInput) -> Vec<String> {
     let mut roles = Vec::new();
-    if input.is_official || input.source_kind.as_deref() == Some("official_docs") {
-        roles.push("official_reference".to_string());
-    }
+    roles.push(infer_resource_role(
+        &input.url,
+        input.is_official || input.source_kind.as_deref() == Some("official_docs"),
+    ));
     if text.contains("exercise") || text.contains("practice") {
         roles.push("practice".to_string());
     }

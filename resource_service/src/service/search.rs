@@ -269,6 +269,9 @@ fn expand_alias(token: &str) -> &str {
         "postgres" => "postgresql",
         "k8s" => "kubernetes",
         "ctx" => "context",
+        "fs" => "file system",
+        "node:fs" => "file system",
+        "config" => "configmap secret configuration",
         _ => token,
     }
 }

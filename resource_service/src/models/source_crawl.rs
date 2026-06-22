@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SourceRequest {
     pub name: String,
     pub kind: Option<String>,
@@ -25,7 +25,7 @@ pub struct SourceRequest {
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SourcePatchRequest {
     pub name: Option<String>,
     pub enabled: Option<bool>,
@@ -38,7 +38,7 @@ pub struct SourcePatchRequest {
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SourceSite {
     #[serde(rename = "sourceSiteId")]
     pub id: Uuid,
@@ -62,7 +62,7 @@ pub struct SourceSite {
     pub blocked_paths: Vec<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CrawlSeedRequest {
     #[serde(rename = "sourceSiteId")]
     pub source_site_id: Option<Uuid>,
@@ -77,7 +77,7 @@ pub struct CrawlSeedRequest {
     pub metadata: Option<Value>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CrawlSeed {
     #[serde(rename = "crawlSeedId")]
     pub id: Uuid,

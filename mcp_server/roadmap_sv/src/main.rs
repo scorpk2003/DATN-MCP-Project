@@ -1,12 +1,17 @@
-mod server;
 use std::env;
 
 use anyhow::Result;
-use server::*;
 use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt};
 
-use crate::server::server::RoadmapServer;
+mod clients;
+mod contract;
+mod domain;
+mod error;
+mod server;
+mod services;
+
+use crate::server::RoadmapServer;
 
 fn init_tracing(level: &str) {
     let filter = match EnvFilter::try_new(level) {
@@ -37,8 +42,5 @@ async fn main() -> Result<()> {
     let log_level = &env::var("LOG_LEVEL").unwrap_or_else(|_| "info".into());
     init_tracing(log_level);
 
-    let server = RoadmapServer::new();
-    server.run().await?;
-
-    Ok(())
+    RoadmapServer::new().run().await
 }

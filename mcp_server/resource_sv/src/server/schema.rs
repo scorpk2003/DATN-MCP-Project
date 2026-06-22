@@ -77,3 +77,20 @@ pub struct RequestResearchParam {
     #[schemars(description = "Research priority: low, normal, or high.")]
     pub priority: Option<String>,
 }
+
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
+pub struct DiscoverGitHubCandidatesParam {
+    #[serde(rename = "researchTaskId")]
+    pub research_task_id: String,
+    #[schemars(description = "Optional GitHub search query. Defaults to the research task query.")]
+    #[schemars(length(min = 1, max = 200))]
+    pub query: Option<String>,
+    #[schemars(
+        description = "Optional repository language filter, for example Rust or TypeScript."
+    )]
+    pub language: Option<String>,
+    #[serde(rename = "minStars")]
+    pub min_stars: Option<u32>,
+    #[schemars(range(min = 1, max = 10))]
+    pub limit: Option<u32>,
+}

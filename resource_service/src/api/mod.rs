@@ -97,6 +97,10 @@ pub fn router(service: Arc<ResourceService>) -> Router {
         )
         .route("/research/tasks/{id}", get(research::get_research_task))
         .route(
+            "/research/tasks/{id}/discover/github",
+            post(research::discover_github_candidates),
+        )
+        .route(
             "/research/candidates",
             get(research::list_candidates).post(research::create_candidate),
         )
@@ -154,6 +158,10 @@ pub fn router(service: Arc<ResourceService>) -> Router {
         .route(
             "/admin/research/tasks/{id}",
             get(research::get_research_task),
+        )
+        .route(
+            "/admin/research/tasks/{id}/discover/github",
+            post(research::discover_github_candidates),
         )
         .route(
             "/admin/research/candidates/{id}",

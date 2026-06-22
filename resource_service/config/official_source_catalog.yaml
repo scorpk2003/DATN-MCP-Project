@@ -1,0 +1,129 @@
+sources:
+  - id: react_docs
+    name: React Docs
+    kind: official_docs
+    base_url: https://react.dev
+    trust_tier: 1
+    language_hint: en
+    is_official: true
+    enabled: true
+    allowed_paths: ["/learn", "/reference"]
+    blocked_paths: ["/blog", "/community"]
+    default_resource_kind: primary_learning
+    crawl_policy:
+      max_depth_default: 1
+      rate_limit_per_minute: 30
+      respect_robots_txt: true
+      user_agent: self-learn-resource-worker/0.2.1
+  - id: mdn_web_docs
+    name: MDN Web Docs
+    kind: official_docs
+    base_url: https://developer.mozilla.org
+    trust_tier: 1
+    language_hint: en
+    is_official: true
+    enabled: true
+    allowed_paths: ["/en-US/docs/Web", "/en-US/docs/Learn_web_development"]
+    blocked_paths: ["/en-US/blog", "/en-US/plus"]
+    default_resource_kind: official_reference
+    crawl_policy:
+      max_depth_default: 1
+      rate_limit_per_minute: 30
+      respect_robots_txt: true
+      user_agent: self-learn-resource-worker/0.2.1
+  - id: postgresql_docs
+    name: PostgreSQL Docs
+    kind: official_docs
+    base_url: https://www.postgresql.org
+    trust_tier: 1
+    language_hint: en
+    is_official: true
+    enabled: true
+    allowed_paths: ["/docs/current"]
+    blocked_paths: ["/about", "/community", "/download"]
+    default_resource_kind: official_reference
+    crawl_policy:
+      max_depth_default: 1
+      rate_limit_per_minute: 20
+      respect_robots_txt: true
+      user_agent: self-learn-resource-worker/0.2.1
+  - id: docker_docs
+    name: Docker Docs
+    kind: official_docs
+    base_url: https://docs.docker.com
+    trust_tier: 1
+    language_hint: en
+    is_official: true
+    enabled: true
+    allowed_paths: ["/"]
+    blocked_paths: ["/desktop/release-notes", "/manuals/archive"]
+    default_resource_kind: primary_learning
+    crawl_policy:
+      max_depth_default: 1
+      rate_limit_per_minute: 25
+      respect_robots_txt: true
+      user_agent: self-learn-resource-worker/0.2.1
+  - id: rust_docs
+    name: Rust Docs
+    kind: official_docs
+    base_url: https://doc.rust-lang.org
+    trust_tier: 1
+    language_hint: en
+    is_official: true
+    enabled: true
+    allowed_paths: ["/book", "/std", "/cargo", "/reference", "/rust-by-example"]
+    blocked_paths: []
+    default_resource_kind: primary_learning
+    crawl_policy:
+      max_depth_default: 1
+      rate_limit_per_minute: 25
+      respect_robots_txt: true
+      user_agent: self-learn-resource-worker/0.2.1
+  - id: python_docs
+    name: Python Docs
+    kind: official_docs
+    base_url: https://docs.python.org
+    trust_tier: 1
+    language_hint: en
+    is_official: true
+    enabled: true
+    allowed_paths: ["/3/tutorial", "/3/library", "/3/reference", "/3/howto"]
+    blocked_paths: ["/3/whatsnew"]
+    default_resource_kind: primary_learning
+    crawl_policy:
+      max_depth_default: 1
+      rate_limit_per_minute: 25
+      respect_robots_txt: true
+      user_agent: self-learn-resource-worker/0.2.1
+  - id: node_docs
+    name: Node.js Docs
+    kind: official_docs
+    base_url: https://nodejs.org
+    trust_tier: 1
+    language_hint: en
+    is_official: true
+    enabled: true
+    allowed_paths: ["/api", "/en/learn"]
+    blocked_paths: ["/en/blog"]
+    default_resource_kind: official_reference
+    crawl_policy:
+      max_depth_default: 1
+      rate_limit_per_minute: 25
+      respect_robots_txt: true
+      user_agent: self-learn-resource-worker/0.2.1
+  - id: kubernetes_docs
+    name: Kubernetes Docs
+    kind: official_docs
+    base_url: https://kubernetes.io
+    trust_tier: 1
+    language_hint: en
+    is_official: true
+    enabled: true
+    allowed_paths: ["/docs/concepts", "/docs/tutorials", "/docs/tasks"]
+    blocked_paths: ["/blog", "/case-studies"]
+    default_resource_kind: primary_learning
+    crawl_policy:
+      max_depth_default: 1
+      rate_limit_per_minute: 20
+      respect_robots_txt: true
+      user_agent: self-learn-resource-worker/0.2.1

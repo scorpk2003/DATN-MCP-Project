@@ -14,3 +14,5 @@ axum ={ workspace = true }
 serde_json ={ workspace = true}
 serde ={workspace = true}
 tokio-util = {workspace = true}
+uuid = { workspace = true }
+schemars = { workspace = true }

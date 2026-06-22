@@ -1,0 +1,14 @@
+{
+  "summary": {
+    "topicsTotal": 30,
+    "corpusReady": 0,
+    "searchPass": 0,
+    "coveragePass": 0,
+    "recommendationPass": 0,
+    "gapPass": 0,
+    "mcpPass": 0,
+    "criticalFailures": 30,
+    "status": "fail_corpus_not_ready"
+  },
+  "topics": []
+}

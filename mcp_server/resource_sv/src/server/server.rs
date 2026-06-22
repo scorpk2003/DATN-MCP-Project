@@ -25,8 +25,9 @@ use crate::{
     server::{
         config::ServerConfig,
         schema::{
-            GetResourceChunksParam, RecommendResourcesParam, ReportResourceGapParam,
-            RequestResearchParam, ResourceIdParam, SearchResourcesParam, TopicCoverageParam,
+            DiscoverGitHubCandidatesParam, GetResourceChunksParam, RecommendResourcesParam,
+            ReportResourceGapParam, RequestResearchParam, ResourceIdParam, SearchResourcesParam,
+            TopicCoverageParam,
         },
     },
     validation::{
@@ -301,11 +302,83 @@ impl ResourceMcpServer {
         Ok(Self::json_success(data))
     }
 
+    #[tool(
+        description = "Discover GitHub repository candidates for an existing Resource research task. Creates pending candidates only; Resource Service still scores, reviews, and approves trust."
+    )]
+    pub async fn discover_github_candidates(
+        &self,
+        Parameters(param): Parameters<DiscoverGitHubCandidatesParam>,
+    ) -> Result<CallToolResult, ErrorData> {
+        info!("\tCALL TOOL: [DISCOVER GITHUB CANDIDATES]");
+        if param.research_task_id.trim().is_empty() {
+            return Ok(Self::json_success(validation_error(
+                "researchTaskId is required.",
+            )));
+        }
+        if let Some(query) = &param.query {
+            if let Err(error) = validate_text("query", query, 200) {
+                return Ok(Self::json_success(error));
+            }
+        }
+
+        let body = json!({
+            "query": param.query,
+            "language": param.language,
+            "minStars": param.min_stars,
+            "limit": clamp_limit(param.limit, 5, 10),
+        });
+        let data = self
+            .post_resource(
+                &format!("/research/tasks/{}/discover/github", param.research_task_id),
+                body,
+            )
+            .await;
+        Ok(Self::json_success(project_candidate_discovery_response(
+            data,
+        )))
+    }
+
     #[tool(description = "Return the Roadmap and Lesson MCP integration contract.")]
     pub async fn get_integration_contract(&self) -> Result<CallToolResult, ErrorData> {
         info!("\tCALL TOOL: [GET INTEGRATION CONTRACT]");
         Ok(Self::json_success(contracts::integration_contract()))
     }
+}
+
+fn project_candidate_discovery_response(data: Value) -> Value {
+    if is_error(&data) {
+        return data;
+    }
+
+    let candidates = data
+        .get("candidates")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .map(|item| {
+                    json!({
+                        "candidateId": item.get("candidateId").cloned().unwrap_or(Value::Null),
+                        "researchTaskId": item.get("researchTaskId").cloned().unwrap_or(Value::Null),
+                        "url": item.get("canonicalUrl").cloned().unwrap_or_else(|| item.get("url").cloned().unwrap_or(Value::Null)),
+                        "title": item.get("title").cloned().unwrap_or(Value::Null),
+                        "candidateType": item.get("candidateType").cloned().unwrap_or(Value::Null),
+                        "score": item.get("score").cloned().unwrap_or(Value::Null),
+                        "selected": item.get("selected").cloned().unwrap_or(Value::Null),
+                        "provider": item.pointer("/metadata/provider").cloned().unwrap_or(Value::Null),
+                    })
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    json!({
+        "provider": data.get("provider").cloned().unwrap_or(Value::Null),
+        "query": data.get("query").cloned().unwrap_or(Value::Null),
+        "createdCandidateCount": data.get("createdCandidateCount").cloned().unwrap_or(Value::Null),
+        "candidates": candidates,
+        "policy": "Candidates are discovery inputs only. Resource Service approval and trust policy decide whether they become crawl jobs/resources.",
+    })
 }
 
 impl Drop for ResourceMcpServer {

@@ -1,0 +1,361 @@
+topics:
+  - topic_id: react_components
+    topic_name: React components
+    aliases: ["React component", "components", "function component", "component basics"]
+    level: beginner
+    required_resource_types: ["primary_learning", "official_reference"]
+    expected_official_domains: ["react.dev"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: React Learn should satisfy primary_learning. React Reference may satisfy official_reference.
+  - topic_id: react_state
+    topic_name: React state
+    aliases: ["useState", "state in React", "component state", "state variable"]
+    level: beginner
+    required_resource_types: ["primary_learning", "official_reference"]
+    expected_official_domains: ["react.dev"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: Target React docs about state and useState.
+  - topic_id: react_use_effect_cleanup
+    topic_name: React useEffect cleanup
+    aliases: ["useEffect cleanup", "effect cleanup", "cleanup function", "synchronizing with effects"]
+    level: intermediate
+    required_resource_types: ["primary_learning", "official_reference"]
+    expected_official_domains: ["react.dev"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: Must retrieve React official docs for useEffect and/or Synchronizing with Effects.
+  - topic_id: react_context
+    topic_name: React Context
+    aliases: ["useContext", "passing data deeply", "React context provider", "context"]
+    level: intermediate
+    required_resource_types: ["primary_learning", "official_reference"]
+    expected_official_domains: ["react.dev"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: Target React Learn and reference pages for context/useContext.
+  - topic_id: html_forms
+    topic_name: HTML forms
+    aliases: ["form element", "HTML form", "input element", "form controls"]
+    level: beginner
+    required_resource_types: ["official_reference", "primary_learning"]
+    expected_official_domains: ["developer.mozilla.org"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: MDN form reference and Learn forms pages are acceptable.
+  - topic_id: css_flexbox
+    topic_name: CSS flexbox
+    aliases: ["flexbox", "CSS flexible box layout", "display flex", "flex layout"]
+    level: beginner
+    required_resource_types: ["official_reference", "primary_learning"]
+    expected_official_domains: ["developer.mozilla.org"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: MDN Learn flexbox and CSS guide pages are acceptable.
+  - topic_id: css_grid
+    topic_name: CSS grid
+    aliases: ["grid layout", "CSS Grid", "display grid", "grid tracks"]
+    level: beginner
+    required_resource_types: ["official_reference", "primary_learning"]
+    expected_official_domains: ["developer.mozilla.org"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: MDN Learn grid and CSS grid layout guide are acceptable.
+  - topic_id: javascript_async_await
+    topic_name: JavaScript async/await
+    aliases: ["async function", "await", "JavaScript async", "Promises async await"]
+    level: intermediate
+    required_resource_types: ["official_reference", "primary_learning"]
+    expected_official_domains: ["developer.mozilla.org"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: MDN async function and async/await learning pages are acceptable.
+  - topic_id: fetch_api
+    topic_name: Fetch API
+    aliases: ["fetch", "fetch API", "HTTP request JavaScript", "Request Response"]
+    level: beginner
+    required_resource_types: ["official_reference", "primary_learning"]
+    expected_official_domains: ["developer.mozilla.org"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: MDN Fetch API reference and guides are acceptable.
+  - topic_id: postgres_select
+    topic_name: PostgreSQL SELECT
+    aliases: ["SQL select", "SELECT statement", "query rows", "PostgreSQL select"]
+    level: beginner
+    required_resource_types: ["official_reference", "primary_learning"]
+    expected_official_domains: ["postgresql.org"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: PostgreSQL tutorial SELECT and SQL command reference are acceptable.
+  - topic_id: postgres_joins
+    topic_name: PostgreSQL joins
+    aliases: ["SQL joins", "inner join", "left join", "table expressions"]
+    level: beginner
+    required_resource_types: ["official_reference", "primary_learning"]
+    expected_official_domains: ["postgresql.org"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: PostgreSQL tutorial join or table expressions docs are acceptable.
+  - topic_id: postgres_indexes
+    topic_name: PostgreSQL indexes
+    aliases: ["indexes", "CREATE INDEX", "B-tree index", "database index"]
+    level: intermediate
+    required_resource_types: ["official_reference"]
+    expected_official_domains: ["postgresql.org"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: false
+    notes: Must retrieve PostgreSQL official indexes docs.
+  - topic_id: postgres_transactions
+    topic_name: PostgreSQL transactions
+    aliases: ["transactions", "BEGIN COMMIT ROLLBACK", "ACID", "transaction isolation"]
+    level: intermediate
+    required_resource_types: ["official_reference", "primary_learning"]
+    expected_official_domains: ["postgresql.org"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: PostgreSQL tutorial transactions and transaction isolation docs are acceptable.
+  - topic_id: postgres_logical_decoding
+    topic_name: PostgreSQL logical decoding
+    aliases: ["logical decoding", "logical replication", "replication slots", "write-ahead log decoding"]
+    level: advanced
+    required_resource_types: ["official_reference"]
+    expected_official_domains: ["postgresql.org"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 5
+    allow_partial_if_missing_types: false
+    notes: This topic is advanced. Seed exact official logical decoding pages.
+  - topic_id: docker_containers
+    topic_name: Docker containers
+    aliases: ["container", "Docker container", "run container", "container lifecycle"]
+    level: beginner
+    required_resource_types: ["primary_learning", "official_reference"]
+    expected_official_domains: ["docs.docker.com"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: Docker get started and engine docs are acceptable.
+  - topic_id: docker_images
+    topic_name: Docker images
+    aliases: ["image", "Docker image", "container image", "build image"]
+    level: beginner
+    required_resource_types: ["primary_learning", "official_reference"]
+    expected_official_domains: ["docs.docker.com"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: Docker image/build docs are acceptable.
+  - topic_id: dockerfile
+    topic_name: Dockerfile
+    aliases: ["Dockerfile", "Docker build", "FROM RUN COPY", "container build file"]
+    level: intermediate
+    required_resource_types: ["official_reference", "primary_learning"]
+    expected_official_domains: ["docs.docker.com"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: Dockerfile reference must be preferred.
+  - topic_id: docker_compose
+    topic_name: Docker Compose
+    aliases: ["compose", "compose file", "docker compose", "multi-container app"]
+    level: intermediate
+    required_resource_types: ["official_reference", "primary_learning"]
+    expected_official_domains: ["docs.docker.com"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: Docker Compose file reference and get started pages are acceptable.
+  - topic_id: python_functions
+    topic_name: Python functions
+    aliases: ["def", "Python function", "function arguments", "return statement"]
+    level: beginner
+    required_resource_types: ["primary_learning", "official_reference"]
+    expected_official_domains: ["docs.python.org"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: Python tutorial defining functions is acceptable.
+  - topic_id: python_modules
+    topic_name: Python modules
+    aliases: ["module", "import", "package", "Python modules"]
+    level: beginner
+    required_resource_types: ["primary_learning", "official_reference"]
+    expected_official_domains: ["docs.python.org"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: Python tutorial modules is acceptable.
+  - topic_id: python_exceptions
+    topic_name: Python exceptions
+    aliases: ["exception", "try except", "raise", "error handling"]
+    level: beginner
+    required_resource_types: ["primary_learning", "official_reference"]
+    expected_official_domains: ["docs.python.org"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: Python tutorial errors/exceptions and built-in exceptions are acceptable.
+  - topic_id: python_asyncio
+    topic_name: Python asyncio
+    aliases: ["asyncio", "async await Python", "coroutines", "event loop"]
+    level: intermediate
+    required_resource_types: ["official_reference", "primary_learning"]
+    expected_official_domains: ["docs.python.org"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: Python asyncio library docs are acceptable.
+  - topic_id: rust_ownership
+    topic_name: Rust ownership
+    aliases: ["ownership", "borrowing", "references", "Rust borrow checker"]
+    level: beginner
+    required_resource_types: ["primary_learning", "official_reference"]
+    expected_official_domains: ["doc.rust-lang.org"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: Rust Book ownership chapter and reference pages are acceptable.
+  - topic_id: node_event_loop
+    topic_name: Node.js event loop
+    aliases: ["event loop", "Node event loop", "timers", "non-blocking I/O"]
+    level: intermediate
+    required_resource_types: ["primary_learning", "official_reference"]
+    expected_official_domains: ["nodejs.org"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: Node learn docs for event loop are acceptable.
+  - topic_id: node_file_system
+    topic_name: Node.js file system
+    aliases: ["fs", "node:fs", "file system", "read file Node"]
+    level: beginner
+    required_resource_types: ["official_reference"]
+    expected_official_domains: ["nodejs.org"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: false
+    notes: Node fs API docs must be retrieved.
+  - topic_id: node_streams
+    topic_name: Node.js streams
+    aliases: ["stream", "node:stream", "readable stream", "writable stream"]
+    level: intermediate
+    required_resource_types: ["official_reference", "primary_learning"]
+    expected_official_domains: ["nodejs.org"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: Node stream API docs must be retrieved.
+  - topic_id: kubernetes_pods
+    topic_name: Kubernetes Pods
+    aliases: ["pod", "pods", "Kubernetes pod", "smallest deployable unit"]
+    level: beginner
+    required_resource_types: ["primary_learning", "official_reference"]
+    expected_official_domains: ["kubernetes.io"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: Kubernetes pod concept docs are acceptable.
+  - topic_id: kubernetes_deployments
+    topic_name: Kubernetes Deployments
+    aliases: ["deployment", "deployments", "ReplicaSet", "rolling update"]
+    level: intermediate
+    required_resource_types: ["official_reference", "primary_learning"]
+    expected_official_domains: ["kubernetes.io"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: Deployment concept docs are acceptable.
+  - topic_id: kubernetes_services
+    topic_name: Kubernetes Services
+    aliases: ["service", "services", "ClusterIP", "expose application"]
+    level: intermediate
+    required_resource_types: ["official_reference", "primary_learning"]
+    expected_official_domains: ["kubernetes.io"]
+    expected_min_resources: 1
+    expected_min_chunks: 3
+    expected_coverage: good
+    expected_official_in_top_k: 3
+    allow_partial_if_missing_types: true
+    notes: Service concept docs and tutorials are acceptable.
+  - topic_id: kubernetes_configmap_secret
+    topic_name: Kubernetes ConfigMap and Secret
+    aliases: ["ConfigMap", "Secret", "configuration", "environment variables", "sensitive data"]
+    level: intermediate
+    required_resource_types: ["official_reference", "primary_learning"]
+    expected_official_domains: ["kubernetes.io"]
+    expected_min_resources: 2
+    expected_min_chunks: 4
+    expected_coverage: good
+    expected_official_in_top_k: 5
+    allow_partial_if_missing_types: true
+    notes: This topic may need two official resources, ConfigMap and Secret.

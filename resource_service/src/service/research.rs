@@ -130,14 +130,44 @@ fn score_candidate(request: &CandidateRequest) -> CandidateScoringDetails {
         request.snippet.clone().unwrap_or_default()
     )
     .to_ascii_lowercase();
-    let authority_score = if is_official_domain(&url) { 0.95 } else { 0.55 };
+    let metadata = request.metadata.as_ref();
+    let github = metadata.and_then(|metadata| metadata.get("github"));
+    let stars = github
+        .and_then(|github| github.get("stars"))
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or_default();
+    let forks = github
+        .and_then(|github| github.get("forks"))
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or_default();
+    let authority_score = if is_official_domain(&url) {
+        0.95
+    } else if url.contains("github.com") {
+        github_authority_score(stars, forks)
+    } else {
+        0.55
+    };
     let relevance_score = if request.title.as_deref().unwrap_or("").trim().is_empty() {
         0.45
     } else {
         0.75
     };
-    let content_depth_score = if text.len() > 200 { 0.75 } else { 0.50 };
-    let freshness_score = 0.60;
+    let content_depth_score = if github.is_some() {
+        0.65
+    } else if text.len() > 200 {
+        0.75
+    } else {
+        0.50
+    };
+    let freshness_score = if github
+        .and_then(|github| github.get("pushedAt"))
+        .and_then(serde_json::Value::as_str)
+        .is_some()
+    {
+        0.70
+    } else {
+        0.60
+    };
     let duplicate_penalty = 0.0;
     let language_match_score = 1.0;
     let final_score = relevance_score * 0.35
@@ -149,6 +179,8 @@ fn score_candidate(request: &CandidateRequest) -> CandidateScoringDetails {
     let mut reasons = Vec::new();
     if authority_score > 0.9 {
         reasons.push("official or high-authority domain".to_string());
+    } else if github.is_some() {
+        reasons.push("github repository popularity signals available".to_string());
     }
     if relevance_score > 0.7 {
         reasons.push("title/snippet available for relevance review".to_string());
@@ -166,6 +198,16 @@ fn score_candidate(request: &CandidateRequest) -> CandidateScoringDetails {
 }
 
 fn candidate_type(request: &CandidateRequest) -> &'static str {
+    if request
+        .metadata
+        .as_ref()
+        .and_then(|metadata| metadata.get("preferredCandidateType"))
+        .and_then(serde_json::Value::as_str)
+        == Some("project")
+    {
+        return "project";
+    }
+
     let text = format!(
         "{} {} {}",
         request.url,
@@ -198,4 +240,16 @@ fn is_official_domain(text: &str) -> bool {
     ]
     .iter()
     .any(|domain| text.contains(domain))
+}
+
+fn github_authority_score(stars: u64, forks: u64) -> f64 {
+    let star_score: f64 = match stars {
+        10_000.. => 0.90,
+        1_000..=9_999 => 0.80,
+        100..=999 => 0.70,
+        25..=99 => 0.62,
+        _ => 0.50,
+    };
+    let fork_bonus: f64 = if forks >= 100 { 0.05 } else { 0.0 };
+    (star_score + fork_bonus).min(0.92)
 }

@@ -1,0 +1,501 @@
+seeds:
+  - seed_id: react_learn_your_first_component
+    topic_ids: ["react_components"]
+    source_id: react_docs
+    url: https://react.dev/learn/your-first-component
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: React component learning page.
+  - seed_id: react_reference_component
+    topic_ids: ["react_components"]
+    source_id: react_docs
+    url: https://react.dev/reference/react/Component
+    seed_type: url
+    max_depth: 0
+    priority: 8
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: React Component reference.
+  - seed_id: react_learn_state_memory
+    topic_ids: ["react_state"]
+    source_id: react_docs
+    url: https://react.dev/learn/state-a-components-memory
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: React state learning page.
+  - seed_id: react_reference_usestate
+    topic_ids: ["react_state"]
+    source_id: react_docs
+    url: https://react.dev/reference/react/useState
+    seed_type: url
+    max_depth: 0
+    priority: 8
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: useState official reference.
+  - seed_id: react_learn_synchronizing_effects
+    topic_ids: ["react_use_effect_cleanup"]
+    source_id: react_docs
+    url: https://react.dev/learn/synchronizing-with-effects
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: Effect cleanup explanation.
+  - seed_id: react_reference_useeffect
+    topic_ids: ["react_use_effect_cleanup"]
+    source_id: react_docs
+    url: https://react.dev/reference/react/useEffect
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: useEffect cleanup reference.
+  - seed_id: react_learn_passing_data_deeply
+    topic_ids: ["react_context"]
+    source_id: react_docs
+    url: https://react.dev/learn/passing-data-deeply-with-context
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: React context learning page.
+  - seed_id: react_reference_usecontext
+    topic_ids: ["react_context"]
+    source_id: react_docs
+    url: https://react.dev/reference/react/useContext
+    seed_type: url
+    max_depth: 0
+    priority: 8
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: useContext official reference.
+  - seed_id: mdn_html_forms
+    topic_ids: ["html_forms"]
+    source_id: mdn_web_docs
+    url: https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Forms
+    seed_type: url
+    max_depth: 1
+    priority: 10
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: MDN Learn forms section.
+  - seed_id: mdn_form_element
+    topic_ids: ["html_forms"]
+    source_id: mdn_web_docs
+    url: https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/form
+    seed_type: url
+    max_depth: 0
+    priority: 8
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: HTML form element reference.
+  - seed_id: mdn_learn_flexbox
+    topic_ids: ["css_flexbox"]
+    source_id: mdn_web_docs
+    url: https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/CSS_layout/Flexbox
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: MDN Learn flexbox.
+  - seed_id: mdn_flexbox_basic_concepts
+    topic_ids: ["css_flexbox"]
+    source_id: mdn_web_docs
+    url: https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Flexible_box_layout/Basic_concepts
+    seed_type: url
+    max_depth: 0
+    priority: 8
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: MDN Flexbox guide.
+  - seed_id: mdn_learn_grids
+    topic_ids: ["css_grid"]
+    source_id: mdn_web_docs
+    url: https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/CSS_layout/Grids
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: MDN Learn CSS grid.
+  - seed_id: mdn_css_grid_layout
+    topic_ids: ["css_grid"]
+    source_id: mdn_web_docs
+    url: https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout
+    seed_type: url
+    max_depth: 1
+    priority: 8
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: MDN CSS Grid Layout reference/guide.
+  - seed_id: mdn_async_function
+    topic_ids: ["javascript_async_await"]
+    source_id: mdn_web_docs
+    url: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/async_function
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: MDN async function reference.
+  - seed_id: mdn_using_promises
+    topic_ids: ["javascript_async_await"]
+    source_id: mdn_web_docs
+    url: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_promises
+    seed_type: url
+    max_depth: 0
+    priority: 8
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: MDN promises guide.
+  - seed_id: mdn_fetch_api
+    topic_ids: ["fetch_api"]
+    source_id: mdn_web_docs
+    url: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: Fetch API reference.
+  - seed_id: mdn_using_fetch
+    topic_ids: ["fetch_api"]
+    source_id: mdn_web_docs
+    url: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+    seed_type: url
+    max_depth: 0
+    priority: 8
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: Using Fetch guide.
+  - seed_id: pg_select_tutorial
+    topic_ids: ["postgres_select"]
+    source_id: postgresql_docs
+    url: https://www.postgresql.org/docs/current/tutorial-select.html
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: SELECT tutorial.
+  - seed_id: pg_select_reference
+    topic_ids: ["postgres_select"]
+    source_id: postgresql_docs
+    url: https://www.postgresql.org/docs/current/sql-select.html
+    seed_type: url
+    max_depth: 0
+    priority: 8
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: SELECT command reference.
+  - seed_id: pg_joined_tables
+    topic_ids: ["postgres_joins"]
+    source_id: postgresql_docs
+    url: https://www.postgresql.org/docs/current/queries-table-expressions.html
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: Table expressions and joins.
+  - seed_id: pg_indexes
+    topic_ids: ["postgres_indexes"]
+    source_id: postgresql_docs
+    url: https://www.postgresql.org/docs/current/indexes.html
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: Indexes chapter.
+  - seed_id: pg_create_index
+    topic_ids: ["postgres_indexes"]
+    source_id: postgresql_docs
+    url: https://www.postgresql.org/docs/current/sql-createindex.html
+    seed_type: url
+    max_depth: 0
+    priority: 8
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: CREATE INDEX reference.
+  - seed_id: pg_transactions_tutorial
+    topic_ids: ["postgres_transactions"]
+    source_id: postgresql_docs
+    url: https://www.postgresql.org/docs/current/tutorial-transactions.html
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: Transactions tutorial.
+  - seed_id: pg_transaction_isolation
+    topic_ids: ["postgres_transactions"]
+    source_id: postgresql_docs
+    url: https://www.postgresql.org/docs/current/transaction-iso.html
+    seed_type: url
+    max_depth: 0
+    priority: 8
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: Transaction isolation.
+  - seed_id: pg_logical_decoding
+    topic_ids: ["postgres_logical_decoding"]
+    source_id: postgresql_docs
+    url: https://www.postgresql.org/docs/current/logicaldecoding.html
+    seed_type: url
+    max_depth: 1
+    priority: 10
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: Logical decoding entry page.
+  - seed_id: pg_logical_decoding_streaming
+    topic_ids: ["postgres_logical_decoding"]
+    source_id: postgresql_docs
+    url: https://www.postgresql.org/docs/current/logicaldecoding-streaming.html
+    seed_type: url
+    max_depth: 0
+    priority: 8
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: Logical decoding streaming.
+  - seed_id: docker_get_started
+    topic_ids: ["docker_containers", "docker_images"]
+    source_id: docker_docs
+    url: https://docs.docker.com/get-started/
+    seed_type: url
+    max_depth: 1
+    priority: 10
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: Docker get started.
+  - seed_id: docker_containers_manual
+    topic_ids: ["docker_containers"]
+    source_id: docker_docs
+    url: https://docs.docker.com/engine/containers/
+    seed_type: url
+    max_depth: 1
+    priority: 8
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: Docker containers docs.
+  - seed_id: docker_images_manual
+    topic_ids: ["docker_images"]
+    source_id: docker_docs
+    url: https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-an-image/
+    seed_type: url
+    max_depth: 0
+    priority: 8
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: What is an image.
+  - seed_id: dockerfile_reference
+    topic_ids: ["dockerfile"]
+    source_id: docker_docs
+    url: https://docs.docker.com/reference/dockerfile/
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: Dockerfile reference.
+  - seed_id: docker_build_guide
+    topic_ids: ["dockerfile"]
+    source_id: docker_docs
+    url: https://docs.docker.com/build/concepts/dockerfile/
+    seed_type: url
+    max_depth: 0
+    priority: 8
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: Dockerfile concept guide.
+  - seed_id: docker_compose_file_reference
+    topic_ids: ["docker_compose"]
+    source_id: docker_docs
+    url: https://docs.docker.com/reference/compose-file/
+    seed_type: url
+    max_depth: 1
+    priority: 10
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: Compose file reference.
+  - seed_id: docker_compose_get_started
+    topic_ids: ["docker_compose"]
+    source_id: docker_docs
+    url: https://docs.docker.com/compose/gettingstarted/
+    seed_type: url
+    max_depth: 0
+    priority: 8
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: Compose get started.
+  - seed_id: python_tutorial_functions
+    topic_ids: ["python_functions"]
+    source_id: python_docs
+    url: https://docs.python.org/3/tutorial/controlflow.html#defining-functions
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: Python tutorial defining functions.
+  - seed_id: python_tutorial_modules
+    topic_ids: ["python_modules"]
+    source_id: python_docs
+    url: https://docs.python.org/3/tutorial/modules.html
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: Python tutorial modules.
+  - seed_id: python_tutorial_errors
+    topic_ids: ["python_exceptions"]
+    source_id: python_docs
+    url: https://docs.python.org/3/tutorial/errors.html
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: Python tutorial errors and exceptions.
+  - seed_id: python_builtin_exceptions
+    topic_ids: ["python_exceptions"]
+    source_id: python_docs
+    url: https://docs.python.org/3/library/exceptions.html
+    seed_type: url
+    max_depth: 0
+    priority: 8
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: Built-in exceptions reference.
+  - seed_id: python_asyncio
+    topic_ids: ["python_asyncio"]
+    source_id: python_docs
+    url: https://docs.python.org/3/library/asyncio.html
+    seed_type: url
+    max_depth: 1
+    priority: 10
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: asyncio official library docs.
+  - seed_id: rust_book_ownership
+    topic_ids: ["rust_ownership"]
+    source_id: rust_docs
+    url: https://doc.rust-lang.org/book/ch04-00-understanding-ownership.html
+    seed_type: url
+    max_depth: 1
+    priority: 10
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: Rust Book ownership chapter.
+  - seed_id: rust_reference_behavior_not_considered_unsafe
+    topic_ids: ["rust_ownership"]
+    source_id: rust_docs
+    url: https://doc.rust-lang.org/reference/behavior-considered-undefined.html
+    seed_type: url
+    max_depth: 0
+    priority: 6
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: Rust Reference page that exercises official_reference classification.
+  - seed_id: node_event_loop_learn
+    topic_ids: ["node_event_loop"]
+    source_id: node_docs
+    url: https://nodejs.org/en/learn/asynchronous-work/event-loop-timers-and-nexttick
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: primary_learning
+    notes: Node event loop learn docs. Verify URL before inserting.
+  - seed_id: node_fs_api
+    topic_ids: ["node_file_system"]
+    source_id: node_docs
+    url: https://nodejs.org/api/fs.html
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: Node fs API docs.
+  - seed_id: node_stream_api
+    topic_ids: ["node_streams"]
+    source_id: node_docs
+    url: https://nodejs.org/api/stream.html
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: Node stream API docs.
+  - seed_id: k8s_pods
+    topic_ids: ["kubernetes_pods"]
+    source_id: kubernetes_docs
+    url: https://kubernetes.io/docs/concepts/workloads/pods/
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: Pods concept docs.
+  - seed_id: k8s_deployments
+    topic_ids: ["kubernetes_deployments"]
+    source_id: kubernetes_docs
+    url: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: Deployments concept docs.
+  - seed_id: k8s_services
+    topic_ids: ["kubernetes_services"]
+    source_id: kubernetes_docs
+    url: https://kubernetes.io/docs/concepts/services-networking/service/
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: Services concept docs.
+  - seed_id: k8s_connect_service_tutorial
+    topic_ids: ["kubernetes_services"]
+    source_id: kubernetes_docs
+    url: https://kubernetes.io/docs/tutorials/services/connect-applications-service/
+    seed_type: url
+    max_depth: 0
+    priority: 8
+    enabled: true
+    expected_resource_kind: practice
+    notes: Service tutorial.
+  - seed_id: k8s_configmap
+    topic_ids: ["kubernetes_configmap_secret"]
+    source_id: kubernetes_docs
+    url: https://kubernetes.io/docs/concepts/configuration/configmap/
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: ConfigMap concept docs.
+  - seed_id: k8s_secret
+    topic_ids: ["kubernetes_configmap_secret"]
+    source_id: kubernetes_docs
+    url: https://kubernetes.io/docs/concepts/configuration/secret/
+    seed_type: url
+    max_depth: 0
+    priority: 10
+    enabled: true
+    expected_resource_kind: official_reference
+    notes: Secret concept docs.

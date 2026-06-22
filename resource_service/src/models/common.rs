@@ -2,29 +2,29 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ApiMeta {
     #[serde(rename = "requestId")]
     pub request_id: String,
     pub timestamp: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ApiErrorBody {
     pub code: String,
     pub message: String,
     pub details: Value,
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct ApiEnvelope<T: Serialize> {
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ApiEnvelope<T> {
     pub success: bool,
     pub data: Option<T>,
     pub error: Option<ApiErrorBody>,
     pub meta: ApiMeta,
 }
 
-impl<T: Serialize> ApiEnvelope<T> {
+impl<T> ApiEnvelope<T> {
     pub fn ok(data: T) -> Self {
         Self {
             success: true,
@@ -54,13 +54,13 @@ pub fn utc_timestamp() -> String {
     format!("{millis}")
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct Page<T: Serialize> {
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Page<T> {
     pub items: Vec<T>,
     pub pagination: PaginationMeta,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct PaginationMeta {
     pub limit: i64,
     pub offset: i64,

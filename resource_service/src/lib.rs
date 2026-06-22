@@ -1,6 +1,7 @@
 pub mod api;
 pub mod chunker;
 pub mod config;
+pub mod corpus;
 pub mod db;
 pub mod embedding_provider;
 pub mod error;

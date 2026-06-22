@@ -1,6 +1,7 @@
 mod admin;
 mod embedding;
 mod enrichment;
+mod github_discovery;
 mod pipeline;
 mod research;
 mod resources;

@@ -220,6 +220,11 @@ impl ResourceRepository {
                 "INSERT INTO resource_service.research_candidates(
                     task_id, url, canonical_url, title, snippet, metadata
                  ) VALUES ($1, $2, $3, $4, $5, $6)
+                 ON CONFLICT (task_id, canonical_url) DO UPDATE
+                 SET title = COALESCE(EXCLUDED.title, resource_service.research_candidates.title),
+                     snippet = COALESCE(EXCLUDED.snippet, resource_service.research_candidates.snippet),
+                     metadata = resource_service.research_candidates.metadata || EXCLUDED.metadata,
+                     reject_reason = NULL
                  RETURNING id, task_id, url, canonical_url, title, selected, reject_reason, metadata",
                 &[
                     &request.research_task_id,
