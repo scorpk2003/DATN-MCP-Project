@@ -1,0 +1,74 @@
+services:
+  resource-postgres:
+    image: pgvector/pgvector:pg18
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${RESOURCE_DB:-postgres}
+      POSTGRES_USER: ${RESOURCE_USER:-postgres}
+      POSTGRES_PASSWORD: ${RESOURCE_PASS:-1234}
+    ports:
+      - "${RESOURCE_SERVICE_PORT:-5433}:5432"
+    volumes:
+      - resource-postgres-data:/var/lib/postgresql/data
+      - ./resource_service_postgres.sql:/docker-entrypoint-initdb.d/001-resource-service.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - datn-network
+
+  resource-api:
+    build:
+      context: .
+      dockerfile: docker/resource-service.Dockerfile
+    env_file:
+      - .env
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      RESOURCE_SERVICE_API_HOST: 0.0.0.0
+      RESOURCE_SERVICE_API_PORT: ${RESOURCE_SERVICE_API_PORT:-3200}
+      RESOURCE_SERVICE_HOST: resource-postgres
+      RESOURCE_SERVICE_PORT: 5432
+      RESOURCE_SERVICE_BASE_URL: http://resource-api:${RESOURCE_SERVICE_API_PORT:-3200}
+      RESOURCE_SERVICE_URL: http://resource-api:${RESOURCE_SERVICE_API_PORT:-3200}
+    command: ["/usr/local/bin/resource_service"]
+    ports:
+      - "${RESOURCE_SERVICE_API_PORT:-3200}:${RESOURCE_SERVICE_API_PORT:-3200}"
+    depends_on:
+      resource-postgres:
+        condition: service_healthy
+    networks:
+      - datn-network
+
+  resource-worker:
+    build:
+      context: .
+      dockerfile: docker/resource-service.Dockerfile
+    env_file:
+      - .env
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      RESOURCE_SERVICE_HOST: resource-postgres
+      RESOURCE_SERVICE_PORT: 5432
+      RESOURCE_SERVICE_BASE_URL: http://resource-api:${RESOURCE_SERVICE_API_PORT:-3200}
+      RESOURCE_SERVICE_URL: http://resource-api:${RESOURCE_SERVICE_API_PORT:-3200}
+    command: ["/usr/local/bin/resource_worker"]
+    depends_on:
+      resource-postgres:
+        condition: service_healthy
+      resource-api:
+        condition: service_started
+    networks:
+      - datn-network
+
+volumes:
+  resource-postgres-data:
+    name: ${RESOURCE_POSTGRES_VOLUME_NAME:-datn-resource-postgres-data}
+
+networks:
+  datn-network:
+    name: ${DATN_NETWORK_NAME:-datn-network}
+    external: true

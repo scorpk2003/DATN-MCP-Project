@@ -191,6 +191,8 @@ mod tests {
     #[test]
     fn detects_prerequisite_gaps_and_queries() {
         let param = LessonAnalyzeNodeParam {
+            request_id: None,
+            auth_context: None,
             user_id: "user".to_string(),
             roadmap_id: "roadmap".to_string(),
             roadmap_node_id: "node".to_string(),

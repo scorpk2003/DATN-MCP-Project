@@ -22,12 +22,14 @@ use crate::{
     contract,
     domain::{
         LessonAnalyzeNodeParam, LessonCompleteSessionParam, LessonCreateDraftParam,
-        LessonFinalizeParam, LessonGradeAnswerParam, LessonValidateDraftParam,
+        LessonFinalizeParam, LessonGenerateRemediationParam, LessonGradeAnswerParam,
+        LessonValidateDraftParam,
     },
     error::{error_envelope, success_envelope},
     server::config::ServerConfig,
     services::{
-        finalizer, grading, lesson_generator, lesson_validator, node_analyzer, progress_policy,
+        access_policy, finalizer, grading, lesson_generator, lesson_validator, node_analyzer,
+        observability::LessonTelemetry, progress_policy, remediation, request_guard,
         resource_packer,
     },
 };
@@ -35,6 +37,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct LessonServer {
     pub config: ServerConfig,
+    telemetry: Arc<LessonTelemetry>,
     #[allow(dead_code)]
     pub tool_router: ToolRouter<Self>,
 }
@@ -44,6 +47,7 @@ impl LessonServer {
     pub fn new() -> Self {
         Self {
             config: ServerConfig::default(),
+            telemetry: Arc::new(LessonTelemetry::default()),
             tool_router: Self::tool_router(),
         }
     }
@@ -68,7 +72,7 @@ impl LessonServer {
         Ok(())
     }
 
-    fn json_success(value: Value) -> CallToolResult {
+    fn json_result(value: Value) -> CallToolResult {
         match serde_json::to_string(&value) {
             Ok(text) => CallToolResult::success(vec![Content::text(text)]),
             Err(e) => CallToolResult::error(vec![Content::text(format!(
@@ -77,12 +81,31 @@ impl LessonServer {
         }
     }
 
+    fn begin_tool(&self, tool_name: &'static str, request_id: Option<&str>) {
+        self.telemetry.record_tool_call(tool_name, request_id);
+    }
+
+    fn json_success(&self, tool_name: &'static str, value: Value) -> CallToolResult {
+        self.telemetry.record_tool_success(tool_name);
+        Self::json_result(value)
+    }
+
+    fn json_tool_error(
+        &self,
+        tool_name: &'static str,
+        request_id: &Option<String>,
+        error: crate::error::LessonToolError,
+    ) -> CallToolResult {
+        self.telemetry
+            .record_tool_error(tool_name, error.code.as_str(), error.retryable);
+        Self::json_result(tool_error(request_id, error))
+    }
+
     #[tool(description = "Return Lesson MCP supported tools, boundaries, and integration rules.")]
     pub async fn get_lesson_contract(&self) -> Result<CallToolResult, ErrorData> {
-        info!("\tCALL TOOL: [GET LESSON CONTRACT]");
-        Ok(Self::json_success(success_envelope(
-            contract::lesson_contract(),
-        )))
+        const TOOL: &str = "get_lesson_contract";
+        self.begin_tool(TOOL, None);
+        Ok(self.json_success(TOOL, success_envelope(contract::lesson_contract())))
     }
 
     #[tool(
@@ -94,29 +117,58 @@ impl LessonServer {
 
     #[tool(description = "Return Lesson MCP process health.")]
     pub async fn lesson_health(&self) -> Result<CallToolResult, ErrorData> {
-        info!("\tCALL TOOL: [LESSON HEALTH]");
-        Ok(Self::json_success(success_envelope(json!({
-            "service": "lesson_mcp",
-            "status": "ok",
-            "version": "0.1.0",
-            "endpoint": format!("{}/mcp", self.config.url),
+        const TOOL: &str = "lesson_health";
+        self.begin_tool(TOOL, None);
+        self.telemetry.record_tool_success(TOOL);
+        Ok(Self::json_result(success_envelope(json!({
+                "service": "lesson_mcp",
+                "status": "ok",
+                "version": "0.1.0",
+                "endpoint": format!("{}/mcp", self.config.url),
+                "observability": self.telemetry.snapshot(),
         }))))
     }
 
     #[tool(description = "Return Lesson MCP readiness for Orchestrator-managed v0.1 flow.")]
     pub async fn lesson_readiness(&self) -> Result<CallToolResult, ErrorData> {
-        info!("\tCALL TOOL: [LESSON READINESS]");
+        const TOOL: &str = "lesson_readiness";
+        self.begin_tool(TOOL, None);
         let ready = !self.config.resource_mcp_url.trim().is_empty()
             && !self.config.database_mcp_url.trim().is_empty();
+        if ready {
+            self.telemetry.record_tool_success(TOOL);
+        } else {
+            self.telemetry
+                .record_tool_error(TOOL, "LESSON_MCP_NOT_READY", false);
+        }
+        let telemetry = self.telemetry.snapshot();
 
         let data = json!({
             "service": "lesson_mcp",
             "ready": ready,
+            "status": if ready { "ready" } else { "not_ready" },
             "mode": "orchestrator_managed_v0_1",
             "checks": {
-                "resourceMcpUrl": self.config.resource_mcp_url,
-                "databaseMcpUrl": self.config.database_mcp_url,
-                "internalTokenConfigured": self.config.internal_token_configured,
+                "resourceMcp": {
+                    "configured": !self.config.resource_mcp_url.trim().is_empty(),
+                    "url": self.config.resource_mcp_url,
+                    "runtimeVerified": false,
+                    "requiredFor": "lesson_create_draft evidence supplied by Orchestrator"
+                },
+                "databaseMcp": {
+                    "configured": !self.config.database_mcp_url.trim().is_empty(),
+                    "url": self.config.database_mcp_url,
+                    "runtimeVerified": false,
+                    "contractStatus": "missing_database_tools"
+                },
+                "internalToken": {
+                    "configured": self.config.internal_token_configured,
+                    "required": false
+                },
+                "telemetry": {
+                    "configured": true,
+                    "runtimeVerified": true
+                }
             },
             "implementedTools": [
                 "get_lesson_contract",
@@ -128,6 +180,7 @@ impl LessonServer {
                 "lesson_validate_draft",
                 "lesson_finalize",
                 "lesson_grade_answer",
+                "lesson_generate_remediation",
                 "lesson_complete_session"
             ],
             "implementedServices": [
@@ -137,15 +190,80 @@ impl LessonServer {
                 "lesson_validator",
                 "finalizer",
                 "grading",
-                "progress_policy"
+                "remediation",
+                "progress_policy",
+                "request_guard",
+                "access_policy"
             ],
-            "nextBuildStep": "Add MCP/client-level integration tests and fixtures.",
+            "errorTaxonomy": [
+                "INVALID_INPUT",
+                "INSUFFICIENT_RESOURCES",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "DATABASE_ERROR",
+                "DEPENDENCY_UNAVAILABLE",
+                "EVALUATION_FAILED",
+                "GENERATION_FAILED"
+            ],
+            "requestGuards": {
+                "answerTextMaxBytes": 8192,
+                "codeSubmissionMaxBytes": 65536,
+                "resourcePackMaxBytes": 262144,
+                "singleChunkMaxBytes": 16384,
+                "maxResourceChunksPerLesson": 20,
+                "maxDraftBlocks": 20,
+                "maxQuizItems": 20,
+                "scoreRange": "0..1"
+            },
+            "permissionPolicy": {
+                "mode": "hybrid_orchestrator_verified_context",
+                "requiresVerifiedAuthContext": true,
+                "sensitiveActionsRequireScope": true,
+                "databaseRuntimeVerification": false
+            },
+            "databaseContract": {
+                "status": "missing_database_tools",
+                "mappingDocument": "mcp_server/lesson_sv/docs/database_mcp_contract_mapping.md",
+                "requiredLessonTools": [
+                    "create_lesson",
+                    "create_lesson_block",
+                    "link_lesson_resource",
+                    "create_lesson_exercise",
+                    "create_lesson_quiz"
+                ],
+                "currentDatabaseMcpHasLessonTools": false
+            },
+            "remediation": {
+                "status": "ready",
+                "requiresResourceRefs": true,
+                "requiresFailedOrWeakGradingResult": true,
+                "generatesRetryActivity": true
+            },
+            "observability": {
+                "status": "ready",
+                "structuredLogs": true,
+                "inProcessCounters": true,
+                "counters": telemetry
+            },
+            "hardeningStatus": {
+                "phase": "v0.2",
+                "completedPhases": [
+                    "error_taxonomy_request_guards",
+                    "permission_boundary",
+                    "database_contract_verification",
+                    "remediation_flow",
+                    "mcp_client_integration_tests",
+                    "observability_readiness_gate"
+                ],
+                "remainingPhases": []
+            },
+            "nextBuildStep": null,
         });
 
         if ready {
-            Ok(Self::json_success(success_envelope(data)))
+            Ok(Self::json_result(success_envelope(data)))
         } else {
-            Ok(Self::json_success(error_envelope(
+            Ok(Self::json_result(error_envelope(
                 "LESSON_MCP_NOT_READY",
                 "Lesson MCP required downstream configuration is incomplete.",
                 data,
@@ -159,20 +277,35 @@ impl LessonServer {
         &self,
         Parameters(param): Parameters<LessonAnalyzeNodeParam>,
     ) -> Result<CallToolResult, ErrorData> {
-        info!("\tCALL TOOL: [LESSON ANALYZE NODE]");
-        if let Some(error) =
-            required_context_error(&param.user_id, &param.roadmap_id, &param.roadmap_node_id)
-        {
-            return Ok(Self::json_success(error));
+        const TOOL: &str = "lesson_analyze_node";
+        self.begin_tool(TOOL, param.request_id.as_deref());
+        if let Err(error) = request_guard::require_context(
+            &param.user_id,
+            &param.roadmap_id,
+            &param.roadmap_node_id,
+        ) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
+        }
+        if let Err(error) = access_policy::require_verified_access(
+            &param.auth_context,
+            Some(&param.user_id),
+            "roadmap:read",
+            "roadmap_node",
+            Some(&param.roadmap_node_id),
+        ) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
         }
 
         let requirement = node_analyzer::analyze_node(&param);
 
-        Ok(Self::json_success(success_envelope(json!({
-            "status": "ok",
-            "implementationStatus": "rule_based_v1",
-            "lessonRequirement": requirement,
-        }))))
+        Ok(self.json_success(
+            TOOL,
+            success_envelope(json!({
+                "status": "ok",
+                "implementationStatus": "rule_based_v1",
+                "lessonRequirement": requirement,
+            })),
+        ))
     }
 
     #[tool(
@@ -182,41 +315,59 @@ impl LessonServer {
         &self,
         Parameters(param): Parameters<LessonCreateDraftParam>,
     ) -> Result<CallToolResult, ErrorData> {
-        info!("\tCALL TOOL: [LESSON CREATE DRAFT]");
-        if let Some(error) =
-            required_context_error(&param.user_id, &param.roadmap_id, &param.roadmap_node_id)
-        {
-            return Ok(Self::json_success(error));
+        const TOOL: &str = "lesson_create_draft";
+        self.begin_tool(TOOL, param.request_id.as_deref());
+        if let Err(error) = request_guard::require_context(
+            &param.user_id,
+            &param.roadmap_id,
+            &param.roadmap_node_id,
+        ) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
+        }
+        if let Err(error) = access_policy::require_verified_access(
+            &param.auth_context,
+            Some(&param.user_id),
+            "lesson:write",
+            "roadmap_node",
+            Some(&param.roadmap_node_id),
+        ) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
+        }
+        if let Err(error) = request_guard::validate_create_draft(&param) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
         }
 
         let packed_evidence =
             resource_packer::pack_resources(&param.lesson_requirement, &param.resources);
 
         if !resource_packer::has_sufficient_evidence(&packed_evidence) {
-            return Ok(Self::json_success(success_envelope(json!({
-                "status": "insufficient_resources",
-                "lessonDraft": Value::Null,
-                "issues": [{
-                    "type": "insufficient_evidence",
-                    "message": "Resource candidates do not provide enough high-quality chunk evidence for lesson generation.",
-                    "severity": "high"
-                }],
-                "requiredResourceQuery": param.lesson_requirement.resource_queries,
-                "packedEvidence": packed_evidence,
-                "implementationStatus": "resource_packing_v1",
-            }))));
+            return Ok(self.json_tool_error(
+                TOOL,
+                &param.request_id,
+                crate::error::LessonToolError::new(
+                    crate::error::LessonErrorCode::InsufficientResources,
+                    "Resource candidates do not provide enough high-quality chunk evidence for lesson generation.",
+                    json!({
+                        "requiredResourceQuery": param.lesson_requirement.resource_queries,
+                        "packedEvidence": packed_evidence,
+                    }),
+                ),
+            ));
         }
 
         let lesson_draft =
             lesson_generator::generate_draft(&param.lesson_requirement, &packed_evidence);
 
-        Ok(Self::json_success(success_envelope(json!({
-            "status": "ready",
-            "lessonDraft": lesson_draft,
-            "issues": [],
-            "packedEvidence": packed_evidence,
-            "implementationStatus": "lesson_generator_v1",
-        }))))
+        Ok(self.json_success(
+            TOOL,
+            success_envelope(json!({
+                "status": "ready",
+                "lessonDraft": lesson_draft,
+                "issues": [],
+                "packedEvidence": packed_evidence,
+                "implementationStatus": "lesson_generator_v1",
+            })),
+        ))
     }
 
     #[tool(description = "Validate a lesson draft against quality and evidence policies.")]
@@ -224,17 +375,33 @@ impl LessonServer {
         &self,
         Parameters(param): Parameters<LessonValidateDraftParam>,
     ) -> Result<CallToolResult, ErrorData> {
-        info!("\tCALL TOOL: [LESSON VALIDATE DRAFT]");
+        const TOOL: &str = "lesson_validate_draft";
+        self.begin_tool(TOOL, param.request_id.as_deref());
+        if let Err(error) = access_policy::require_verified_access(
+            &param.auth_context,
+            None,
+            "lesson:write",
+            "lesson_draft",
+            Some(&param.lesson_draft.topic),
+        ) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
+        }
+        if let Err(error) = request_guard::validate_draft_size(&param.lesson_draft) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
+        }
         let validation =
             lesson_validator::validate_draft(&param.lesson_draft, param.validation_policy);
 
-        Ok(Self::json_success(success_envelope(json!({
-            "status": if validation.passed { "passed" } else { "failed" },
-            "qualityScore": validation.quality_score,
-            "checks": validation.checks,
-            "fixSuggestions": validation.fix_suggestions,
-            "implementationStatus": "lesson_validator_v1",
-        }))))
+        Ok(self.json_success(
+            TOOL,
+            success_envelope(json!({
+                "status": if validation.passed { "passed" } else { "failed" },
+                "qualityScore": validation.quality_score,
+                "checks": validation.checks,
+                "fixSuggestions": validation.fix_suggestions,
+                "implementationStatus": "lesson_validator_v1",
+            })),
+        ))
     }
 
     #[tool(description = "Finalize a lesson draft into a database-ready persistence payload.")]
@@ -242,7 +409,20 @@ impl LessonServer {
         &self,
         Parameters(param): Parameters<LessonFinalizeParam>,
     ) -> Result<CallToolResult, ErrorData> {
-        info!("\tCALL TOOL: [LESSON FINALIZE]");
+        const TOOL: &str = "lesson_finalize";
+        self.begin_tool(TOOL, param.request_id.as_deref());
+        if let Err(error) = access_policy::require_verified_access(
+            &param.auth_context,
+            None,
+            "lesson:write",
+            "lesson_draft",
+            Some(&param.lesson_draft.topic),
+        ) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
+        }
+        if let Err(error) = request_guard::validate_draft_size(&param.lesson_draft) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
+        }
         let status = param
             .save_policy
             .as_ref()
@@ -250,11 +430,14 @@ impl LessonServer {
             .unwrap_or_else(|| "ready".to_string());
         let lesson_payload = finalizer::build_lesson_payload(param.lesson_draft, status);
 
-        Ok(Self::json_success(success_envelope(json!({
-            "status": "ok",
-            "lessonPayload": lesson_payload,
-            "implementationStatus": "finalizer_v1",
-        }))))
+        Ok(self.json_success(
+            TOOL,
+            success_envelope(json!({
+                "status": "ok",
+                "lessonPayload": lesson_payload,
+                "implementationStatus": "finalizer_v1",
+            })),
+        ))
     }
 
     #[tool(description = "Grade a learner answer against an activity rubric.")]
@@ -262,28 +445,43 @@ impl LessonServer {
         &self,
         Parameters(param): Parameters<LessonGradeAnswerParam>,
     ) -> Result<CallToolResult, ErrorData> {
-        info!("\tCALL TOOL: [LESSON GRADE ANSWER]");
-        if param.answer.trim().is_empty() {
-            return Ok(Self::json_success(error_envelope(
-                "LESSON_EMPTY_ANSWER",
-                "answer is required.",
-                json!({ "activity": param.activity }),
-                false,
-            )));
+        const TOOL: &str = "lesson_grade_answer";
+        self.begin_tool(TOOL, param.request_id.as_deref());
+        if let Err(error) = request_guard::require_lesson_session_context(
+            &param.user_id,
+            &param.lesson_id,
+            &param.session_id,
+        ) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
+        }
+        if let Err(error) = access_policy::require_verified_access(
+            &param.auth_context,
+            Some(&param.user_id),
+            "lesson:evaluate",
+            "lesson",
+            Some(&param.lesson_id),
+        ) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
+        }
+        if let Err(error) = request_guard::validate_answer(&param) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
         }
 
         let result = grading::grade_answer(&param.answer, &param.rubric);
 
-        Ok(Self::json_success(success_envelope(json!({
-            "status": result.status,
-            "score": result.score,
-            "passed": result.passed,
-            "feedback": result.feedback,
-            "mistakes": result.mistakes,
-            "improvementSuggestions": result.improvement_suggestions,
-            "nextRecommendation": result.next_recommendation,
-            "implementationStatus": "grading_v1",
-        }))))
+        Ok(self.json_success(
+            TOOL,
+            success_envelope(json!({
+                "status": result.status,
+                "score": result.score,
+                "passed": result.passed,
+                "feedback": result.feedback,
+                "mistakes": result.mistakes,
+                "improvementSuggestions": result.improvement_suggestions,
+                "nextRecommendation": result.next_recommendation,
+                "implementationStatus": "grading_v1",
+            })),
+        ))
     }
 
     #[tool(description = "Complete a lesson session and produce a progress update payload.")]
@@ -291,16 +489,86 @@ impl LessonServer {
         &self,
         Parameters(param): Parameters<LessonCompleteSessionParam>,
     ) -> Result<CallToolResult, ErrorData> {
-        info!("\tCALL TOOL: [LESSON COMPLETE SESSION]");
+        const TOOL: &str = "lesson_complete_session";
+        self.begin_tool(TOOL, param.request_id.as_deref());
+        if let Err(error) = request_guard::require_lesson_session_context(
+            &param.user_id,
+            &param.lesson_id,
+            &param.session_id,
+        ) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
+        }
+        if let Err(error) = access_policy::require_verified_access(
+            &param.auth_context,
+            Some(&param.user_id),
+            "lesson:progress",
+            "session",
+            Some(&param.session_id),
+        ) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
+        }
+        if let Err(error) = request_guard::validate_session_scores(&param.session_summary) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
+        }
         let result = progress_policy::complete_session(param);
 
-        Ok(Self::json_success(success_envelope(json!({
-            "status": result.status,
-            "masteryScore": result.mastery_score,
-            "progressPayload": result.progress_payload,
-            "nextAction": result.next_action,
-            "implementationStatus": "progress_policy_v1",
-        }))))
+        Ok(self.json_success(
+            TOOL,
+            success_envelope(json!({
+                "status": result.status,
+                "masteryScore": result.mastery_score,
+                "progressPayload": result.progress_payload,
+                "nextAction": result.next_action,
+                "implementationStatus": "progress_policy_v1",
+            })),
+        ))
+    }
+
+    #[tool(description = "Generate grounded remediation after a weak or failed lesson answer.")]
+    pub async fn lesson_generate_remediation(
+        &self,
+        Parameters(param): Parameters<LessonGenerateRemediationParam>,
+    ) -> Result<CallToolResult, ErrorData> {
+        const TOOL: &str = "lesson_generate_remediation";
+        self.begin_tool(TOOL, param.request_id.as_deref());
+        if let Err(error) = request_guard::require_context(
+            &param.user_id,
+            &param.roadmap_id,
+            &param.roadmap_node_id,
+        ) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
+        }
+        if let Err(error) = request_guard::require_lesson_session_context(
+            &param.user_id,
+            &param.lesson_id,
+            &param.session_id,
+        ) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
+        }
+        if let Err(error) = access_policy::require_verified_access(
+            &param.auth_context,
+            Some(&param.user_id),
+            "lesson:evaluate",
+            "lesson",
+            Some(&param.lesson_id),
+        ) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
+        }
+        if let Err(error) = request_guard::validate_remediation_request(&param) {
+            return Ok(self.json_tool_error(TOOL, &param.request_id, error));
+        }
+
+        match remediation::generate_remediation(&param) {
+            Ok(remediation) => Ok(self.json_success(
+                TOOL,
+                success_envelope(json!({
+                    "status": "ok",
+                    "remediation": remediation,
+                    "implementationStatus": "remediation_v1",
+                })),
+            )),
+            Err(error) => Ok(self.json_tool_error(TOOL, &param.request_id, error)),
+        }
     }
 }
 
@@ -310,24 +578,8 @@ impl Drop for LessonServer {
     }
 }
 
-fn required_context_error(user_id: &str, roadmap_id: &str, roadmap_node_id: &str) -> Option<Value> {
-    if user_id.trim().is_empty()
-        || roadmap_id.trim().is_empty()
-        || roadmap_node_id.trim().is_empty()
-    {
-        return Some(error_envelope(
-            "LESSON_INVALID_CONTEXT",
-            "userId, roadmapId, and roadmapNodeId are required.",
-            json!({
-                "userIdEmpty": user_id.trim().is_empty(),
-                "roadmapIdEmpty": roadmap_id.trim().is_empty(),
-                "roadmapNodeIdEmpty": roadmap_node_id.trim().is_empty(),
-            }),
-            false,
-        ));
-    }
-
-    None
+fn tool_error(request_id: &Option<String>, error: crate::error::LessonToolError) -> Value {
+    crate::error::tool_error_envelope(error, request_id.as_deref())
 }
 
 #[tool_handler]

@@ -1,0 +1,11 @@
+.git
+.vs
+.agents
+docs
+**/target
+**/node_modules
+**/dist
+**/build
+**/.env
+*.docx
+*.txt

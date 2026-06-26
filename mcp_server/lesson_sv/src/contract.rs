@@ -61,10 +61,40 @@ pub fn lesson_contract() -> Value {
                 "responsibility": "Score learner answers against rubric criteria, classify mistakes, and recommend the next action."
             },
             {
+                "name": "remediation",
+                "status": "rule_based_v1",
+                "responsibility": "Generate grounded remedial blocks, hint ladder, retry activity, and next action for weak or failed answers."
+            },
+            {
                 "name": "progress_policy",
                 "status": "policy_v1",
                 "responsibility": "Compute mastery score, completion status, weak topics, progress payload, and next action for completed lesson sessions."
+            },
+            {
+                "name": "request_guard",
+                "status": "guard_v1",
+                "responsibility": "Reject missing identifiers, oversized answers/resources, invalid draft sizes, and scores outside the 0..1 range."
+            },
+            {
+                "name": "access_policy",
+                "status": "permission_boundary_v1",
+                "responsibility": "Reject user-scoped tool calls that lack verified auth context, required scope, or matching user ownership context."
+            },
+            {
+                "name": "observability",
+                "status": "telemetry_v1",
+                "responsibility": "Track in-process tool call, success, error, per-tool, and error-code counters; expose snapshots through health and readiness."
             }
+        ],
+        "errorTaxonomy": [
+            "INVALID_INPUT",
+            "INSUFFICIENT_RESOURCES",
+            "PERMISSION_DENIED",
+            "RESOURCE_NOT_FOUND",
+            "DATABASE_ERROR",
+            "DEPENDENCY_UNAVAILABLE",
+            "EVALUATION_FAILED",
+            "GENERATION_FAILED"
         ],
         "tools": [
             "get_lesson_contract",
@@ -76,13 +106,13 @@ pub fn lesson_contract() -> Value {
             "lesson_validate_draft",
             "lesson_finalize",
             "lesson_grade_answer",
+            "lesson_generate_remediation",
             "lesson_complete_session"
         ],
         "plannedTools": [
             "lesson_start_session",
             "lesson_get_next_activity",
-            "lesson_submit_answer",
-            "lesson_generate_remediation"
+            "lesson_submit_answer"
         ],
         "resourceMcpDependencies": [
             "search_resources",
@@ -91,10 +121,52 @@ pub fn lesson_contract() -> Value {
             "recommend_resources_for_topic"
         ],
         "databaseMcpDependencyMode": "Orchestrator executes database calls produced by Lesson MCP payloads.",
+        "databaseContract": {
+            "status": "missing_database_tools",
+            "mappingDocument": "mcp_server/lesson_sv/docs/database_mcp_contract_mapping.md",
+            "requiredLessonTools": [
+                "create_lesson",
+                "create_lesson_block",
+                "link_lesson_resource",
+                "create_lesson_exercise",
+                "create_lesson_quiz"
+            ],
+            "currentDatabaseMcpHasLessonTools": false
+        },
+        "observability": {
+            "status": "ready",
+            "structuredLogs": true,
+            "inProcessCounters": true,
+            "exposedBy": [
+                "lesson_health",
+                "lesson_readiness"
+            ],
+            "counters": [
+                "totalToolCalls",
+                "totalToolSuccesses",
+                "totalToolErrors",
+                "toolCalls",
+                "toolErrors",
+                "errorCodes"
+            ]
+        },
+        "hardeningStatus": {
+            "phase": "v0.2",
+            "completedPhases": [
+                "error_taxonomy_request_guards",
+                "permission_boundary",
+                "database_contract_verification",
+                "remediation_flow",
+                "mcp_client_integration_tests",
+                "observability_readiness_gate"
+            ],
+            "remainingPhases": []
+        },
         "guardrails": [
             "Do not hardcode topic-specific lesson templates.",
             "Do not generate lesson content without resource evidence.",
             "Do not persist directly while Database MCP is the persistence boundary.",
+            "Reject user-scoped requests without verified auth context.",
             "Return structured JSON envelopes for success and error cases."
         ]
     })
@@ -151,6 +223,7 @@ mod tests {
             "finalizer",
             "grading",
             "progress_policy",
+            "observability",
         ] {
             assert!(
                 services
@@ -159,5 +232,20 @@ mod tests {
                 "missing service {expected_service}"
             );
         }
+    }
+
+    #[test]
+    fn contract_declares_completed_hardening_and_observability() {
+        let contract = lesson_contract();
+
+        assert_eq!(contract["observability"]["status"], "ready");
+        assert_eq!(contract["observability"]["inProcessCounters"], true);
+        assert_eq!(
+            contract["hardeningStatus"]["remainingPhases"]
+                .as_array()
+                .expect("remainingPhases should be an array")
+                .len(),
+            0
+        );
     }
 }

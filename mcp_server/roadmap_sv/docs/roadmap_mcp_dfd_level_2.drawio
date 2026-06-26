@@ -1,0 +1,165 @@
+<mxfile host="app.diagrams.net" agent="Codex" pages="2">
+  <diagram id="roadmap-mcp-dfd-level-2" name="DFD Level 2">
+    <mxGraphModel dx="2200" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="Roadmap MCP - DFD Level 2 / Generate &amp; Plan Roadmap Decomposition" style="text;html=1;strokeColor=none;fillColor=none;fontSize=22;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="510" y="30" width="900" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="orch" value="Orchestrator Agent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#92400e;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="50" y="500" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="resource" value="Resource MCP / Service" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#ede9fe;strokeColor=#6d28d9;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1600" y="310" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p31" value="P3.1&lt;br&gt;Classify Goal &amp;&lt;br&gt;Normalize Stack" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#166534;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="300" y="210" width="170" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="p32" value="P3.2&lt;br&gt;Select Blueprint&lt;br&gt;from Registry" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#166534;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="550" y="210" width="170" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="p33" value="P3.3&lt;br&gt;Build Adaptive Blueprint&lt;br&gt;from Candidate Topics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#166534;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="550" y="420" width="190" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="p34" value="P3.4&lt;br&gt;Decompose Blueprint&lt;br&gt;to TopicPlan[]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#166534;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="820" y="310" width="180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p41" value="P4.1&lt;br&gt;Check Coverage&lt;br&gt;per Topic" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#1d4ed8;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1090" y="310" width="170" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p42" value="P4.2&lt;br&gt;Recommend ResourceRefs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#1d4ed8;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1340" y="210" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="p43" value="P4.3&lt;br&gt;Report Gaps /&lt;br&gt;Request Research" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#1d4ed8;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1340" y="430" width="180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p51" value="P5.1&lt;br&gt;Create Nodes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#15803d;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1090" y="610" width="160" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="p52" value="P5.2&lt;br&gt;Group Nodes&lt;br&gt;into Phases" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#15803d;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="850" y="610" width="160" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="p53" value="P5.3&lt;br&gt;Create Edges&lt;br&gt;from Prerequisites" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#15803d;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="610" y="610" width="170" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="p61" value="P6.1&lt;br&gt;Validate Graph" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef9c3;strokeColor=#a16207;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="400" y="790" width="160" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="p62" value="P6.2&lt;br&gt;Compute Warnings,&lt;br&gt;Assumptions, Confidence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef9c3;strokeColor=#a16207;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="650" y="790" width="200" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p71" value="P7.1&lt;br&gt;Build Database MCP&lt;br&gt;Call Plan" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fee2e2;strokeColor=#b91c1c;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="950" y="790" width="180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p72" value="P7.2&lt;br&gt;Build Tool Response&lt;br&gt;Envelope" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fee2e2;strokeColor=#b91c1c;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1240" y="790" width="180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="d21" value="D2.1&lt;br&gt;Goal Normalization Rules" style="shape=datastore;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#475569" vertex="1" parent="1">
+          <mxGeometry x="290" y="100" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d22" value="D2.2&lt;br&gt;Blueprint Registry" style="shape=datastore;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#475569" vertex="1" parent="1">
+          <mxGeometry x="550" y="100" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d23" value="D2.3&lt;br&gt;Candidate Topic Input" style="shape=datastore;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#475569" vertex="1" parent="1">
+          <mxGeometry x="300" y="430" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d24" value="D2.4&lt;br&gt;Graph Validation Rules" style="shape=datastore;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#475569" vertex="1" parent="1">
+          <mxGeometry x="360" y="930" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d25" value="D2.5&lt;br&gt;Persistence Schema&lt;br&gt;roadmap_draft_v1" style="shape=datastore;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#475569" vertex="1" parent="1">
+          <mxGeometry x="940" y="930" width="190" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="n1" value="Poor coverage never creates fake resources.&lt;br&gt;It marks nodes blocked/partial and exposes research hints." style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#c2410c" vertex="1" parent="1">
+          <mxGeometry x="1370" y="550" width="260" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="Database MCP execution is outside Roadmap MCP.&lt;br&gt;Orchestrator persists separately." style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#c2410c" vertex="1" parent="1">
+          <mxGeometry x="1180" y="930" width="260" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="generate_roadmap_from_goal" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="orch" target="p31">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="candidateTopics" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="orch" target="d23">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="GoalProfile" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p31" target="p32">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="rules" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p31" target="d21">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="deterministic lookup" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p32" target="d22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="selected blueprint" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p32" target="p34">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="candidate_topics_adaptive" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="d23" target="p33">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="adaptive blueprint" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p33" target="p34">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="TopicPlan[]" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p34" target="p41">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" value="get_topic_coverage" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p41" target="resource">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" value="good / partial" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p41" target="p42">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" value="poor" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p41" target="p43">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" value="recommend_resources_for_topic" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p42" target="resource">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" value="report gap / request research" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p43" target="resource">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" value="BoundTopicPlan" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p42" target="p51">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16" value="blocked/partial warnings" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p43" target="p51">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e17" value="nodes" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p51" target="p52">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e18" value="phases" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p52" target="p53">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e19" value="RoadmapGraph" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p53" target="p61">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e20" value="validation rules" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p61" target="d24">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e21" value="ValidationResult" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p61" target="p62">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e22" value="warnings, assumptions, confidence" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p62" target="p71">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e23" value="Database MCP capabilities" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p71" target="d25">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e24" value="databaseReadyPayload&lt;br&gt;notPersisted=true" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p71" target="p72">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e25" value="normalized success/error envelope" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1" source="p72" target="orch">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pB_7ZxVOB8eC9J35d0Rc" name="Page-2">
+    <mxGraphModel dx="1368" dy="986" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

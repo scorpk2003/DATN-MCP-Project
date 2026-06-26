@@ -1,15 +1,19 @@
 use crate::domain::{
-    ExerciseScore, LessonAnalyzeNodeParam, LessonLevel, ResourceCandidateInput, ResourceChunkInput,
-    RoadmapNodeInput, SessionSummary, SourceType, UserContextInput,
+    ExerciseScore, LessonAnalyzeNodeParam, LessonGenerateRemediationParam, LessonLevel,
+    RemediationConstraints, RemediationGradingResultInput, RemediationResourceRef,
+    RemediationSubmissionInput, ResourceCandidateInput, ResourceChunkInput, RoadmapNodeInput,
+    SessionSummary, SourceType, UserContextInput,
 };
 use crate::services::{
     finalizer, grading, lesson_generator, lesson_validator, node_analyzer, progress_policy,
-    resource_packer,
+    remediation, resource_packer,
 };
 
 #[test]
 fn happy_path_generates_validates_finalizes_grades_and_completes() {
     let analyze_param = LessonAnalyzeNodeParam {
+        request_id: None,
+        auth_context: None,
         user_id: "user-1".to_string(),
         roadmap_id: "roadmap-1".to_string(),
         roadmap_node_id: "node-1".to_string(),
@@ -65,6 +69,8 @@ fn happy_path_generates_validates_finalizes_grades_and_completes() {
     assert!(grading.score >= 0.5);
 
     let completion = progress_policy::complete_session(crate::domain::LessonCompleteSessionParam {
+        request_id: None,
+        auth_context: None,
         user_id: "user-1".to_string(),
         lesson_id: "lesson-1".to_string(),
         session_id: "session-1".to_string(),
@@ -85,4 +91,56 @@ fn happy_path_generates_validates_finalizes_grades_and_completes() {
     });
 
     assert_eq!(completion.status, "completed");
+}
+
+#[test]
+fn weak_answer_can_generate_grounded_remediation() {
+    let rubric = vec![crate::domain::RubricItem {
+        criterion: "concept accuracy".to_string(),
+        max_score: 1.0,
+        description: "Uses evidence and explains reasoning".to_string(),
+    }];
+    let grade = grading::grade_answer("not sure", &rubric);
+    assert!(!grade.passed);
+
+    let remediation = remediation::generate_remediation(&LessonGenerateRemediationParam {
+        request_id: Some("req-remediation-flow".to_string()),
+        auth_context: None,
+        user_id: "user-1".to_string(),
+        roadmap_id: "roadmap-1".to_string(),
+        roadmap_node_id: "node-1".to_string(),
+        lesson_id: "lesson-1".to_string(),
+        session_id: "session-1".to_string(),
+        activity_id: "exercise-main".to_string(),
+        grading_result: RemediationGradingResultInput {
+            score: grade.score,
+            passed: grade.passed,
+            mistakes: grade.mistakes,
+            feedback: grade.feedback,
+            mastery_gap: None,
+        },
+        submission: RemediationSubmissionInput {
+            submission_type: "short_answer".to_string(),
+            content: "not sure".to_string(),
+        },
+        resource_refs: vec![RemediationResourceRef {
+            resource_id: "res-sql-joins".to_string(),
+            chunk_id: Some("chunk-1".to_string()),
+            title: "SQL joins documentation".to_string(),
+            source_url: Some("https://example.com/sql-joins".to_string()),
+        }],
+        constraints: Some(RemediationConstraints {
+            max_blocks: Some(3),
+            difficulty: Some("easier".to_string()),
+            include_retry_activity: Some(true),
+        }),
+    })
+    .expect("weak answer should generate remediation");
+
+    assert!(!remediation.remedial_blocks.is_empty());
+    assert_eq!(
+        remediation.retry_activity.activity_id,
+        "retry-exercise-main"
+    );
+    assert_eq!(remediation.next_action["type"], "retry_activity");
 }

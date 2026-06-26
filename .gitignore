@@ -38,6 +38,3 @@ Thumbs.db
 *.sql
 .agents/
 docs/*
-**/docs/*
-
-*.md

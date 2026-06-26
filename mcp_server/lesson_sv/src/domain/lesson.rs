@@ -387,6 +387,60 @@ pub struct LessonCompletionResult {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct RemediationResourceRef {
+    #[serde(rename = "resourceId")]
+    pub resource_id: String,
+    #[serde(rename = "chunkId")]
+    pub chunk_id: Option<String>,
+    pub title: String,
+    #[serde(rename = "sourceUrl")]
+    pub source_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct RemedialBlock {
+    #[serde(rename = "type")]
+    pub block_type: String,
+    pub title: String,
+    pub content: String,
+    #[serde(rename = "resourceRefs")]
+    pub resource_refs: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct HintItem {
+    pub level: u32,
+    pub hint: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct RetryActivity {
+    #[serde(rename = "activityId")]
+    pub activity_id: String,
+    #[serde(rename = "type")]
+    pub activity_type: String,
+    pub prompt: String,
+    #[serde(rename = "expectedAnswer")]
+    pub expected_answer: String,
+    pub rubric: Vec<RubricItem>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct RemediationResult {
+    pub reason: String,
+    #[serde(rename = "masteryGap")]
+    pub mastery_gap: Vec<String>,
+    #[serde(rename = "remedialBlocks")]
+    pub remedial_blocks: Vec<RemedialBlock>,
+    #[serde(rename = "hintLadder")]
+    pub hint_ladder: Vec<HintItem>,
+    #[serde(rename = "retryActivity")]
+    pub retry_activity: RetryActivity,
+    #[serde(rename = "nextAction")]
+    pub next_action: Value,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 pub struct ExerciseScore {
     #[serde(rename = "exerciseId")]
     pub exercise_id: String,

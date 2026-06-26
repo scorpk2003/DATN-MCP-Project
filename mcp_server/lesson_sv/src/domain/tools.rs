@@ -3,12 +3,28 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::domain::{
-    LessonDraft, LessonRequirement, ResourceCandidateInput, RoadmapNodeInput, RubricItem,
-    SessionSummary, UserContextInput, ValidationPolicy,
+    GradingMistake, LessonDraft, LessonRequirement, RemediationResourceRef, ResourceCandidateInput,
+    RoadmapNodeInput, RubricItem, SessionSummary, UserContextInput, ValidationPolicy,
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct AuthContext {
+    #[serde(rename = "userId")]
+    pub user_id: String,
+    pub verified: bool,
+    pub scope: Vec<String>,
+    #[serde(rename = "verifiedBy")]
+    pub verified_by: Option<String>,
+    #[serde(rename = "verifiedAt")]
+    pub verified_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 pub struct LessonAnalyzeNodeParam {
+    #[serde(rename = "requestId")]
+    pub request_id: Option<String>,
+    #[serde(rename = "authContext")]
+    pub auth_context: Option<AuthContext>,
     #[serde(rename = "userId")]
     pub user_id: String,
     #[serde(rename = "roadmapId")]
@@ -35,6 +51,10 @@ pub struct LessonCreateDraftConstraints {
 
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 pub struct LessonCreateDraftParam {
+    #[serde(rename = "requestId")]
+    pub request_id: Option<String>,
+    #[serde(rename = "authContext")]
+    pub auth_context: Option<AuthContext>,
     #[serde(rename = "userId")]
     pub user_id: String,
     #[serde(rename = "roadmapId")]
@@ -49,6 +69,10 @@ pub struct LessonCreateDraftParam {
 
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 pub struct LessonValidateDraftParam {
+    #[serde(rename = "requestId")]
+    pub request_id: Option<String>,
+    #[serde(rename = "authContext")]
+    pub auth_context: Option<AuthContext>,
     #[serde(rename = "lessonDraft")]
     pub lesson_draft: LessonDraft,
     #[serde(rename = "validationPolicy")]
@@ -64,6 +88,10 @@ pub struct LessonFinalizeSavePolicy {
 
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 pub struct LessonFinalizeParam {
+    #[serde(rename = "requestId")]
+    pub request_id: Option<String>,
+    #[serde(rename = "authContext")]
+    pub auth_context: Option<AuthContext>,
     #[serde(rename = "lessonDraft")]
     pub lesson_draft: LessonDraft,
     #[serde(rename = "savePolicy")]
@@ -72,6 +100,10 @@ pub struct LessonFinalizeParam {
 
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 pub struct LessonGradeAnswerParam {
+    #[serde(rename = "requestId")]
+    pub request_id: Option<String>,
+    #[serde(rename = "authContext")]
+    pub auth_context: Option<AuthContext>,
     #[serde(rename = "userId")]
     pub user_id: String,
     #[serde(rename = "lessonId")]
@@ -85,6 +117,10 @@ pub struct LessonGradeAnswerParam {
 
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 pub struct LessonCompleteSessionParam {
+    #[serde(rename = "requestId")]
+    pub request_id: Option<String>,
+    #[serde(rename = "authContext")]
+    pub auth_context: Option<AuthContext>,
     #[serde(rename = "userId")]
     pub user_id: String,
     #[serde(rename = "lessonId")]
@@ -93,4 +129,56 @@ pub struct LessonCompleteSessionParam {
     pub session_id: String,
     #[serde(rename = "sessionSummary")]
     pub session_summary: SessionSummary,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct RemediationGradingResultInput {
+    pub score: f32,
+    pub passed: bool,
+    pub mistakes: Vec<GradingMistake>,
+    pub feedback: String,
+    #[serde(rename = "masteryGap")]
+    pub mastery_gap: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct RemediationSubmissionInput {
+    #[serde(rename = "type")]
+    pub submission_type: String,
+    pub content: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct RemediationConstraints {
+    #[serde(rename = "maxBlocks")]
+    pub max_blocks: Option<u32>,
+    pub difficulty: Option<String>,
+    #[serde(rename = "includeRetryActivity")]
+    pub include_retry_activity: Option<bool>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct LessonGenerateRemediationParam {
+    #[serde(rename = "requestId")]
+    pub request_id: Option<String>,
+    #[serde(rename = "authContext")]
+    pub auth_context: Option<AuthContext>,
+    #[serde(rename = "userId")]
+    pub user_id: String,
+    #[serde(rename = "roadmapId")]
+    pub roadmap_id: String,
+    #[serde(rename = "roadmapNodeId")]
+    pub roadmap_node_id: String,
+    #[serde(rename = "lessonId")]
+    pub lesson_id: String,
+    #[serde(rename = "sessionId")]
+    pub session_id: String,
+    #[serde(rename = "activityId")]
+    pub activity_id: String,
+    #[serde(rename = "gradingResult")]
+    pub grading_result: RemediationGradingResultInput,
+    pub submission: RemediationSubmissionInput,
+    #[serde(rename = "resourceRefs")]
+    pub resource_refs: Vec<RemediationResourceRef>,
+    pub constraints: Option<RemediationConstraints>,
 }

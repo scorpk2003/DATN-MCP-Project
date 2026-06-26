@@ -88,6 +88,8 @@ fn sql_joins_fixture_runs_through_lesson_pipeline() {
     assert!(grade.score >= 0.5);
 
     let completion = progress_policy::complete_session(LessonCompleteSessionParam {
+        request_id: None,
+        auth_context: None,
         user_id: input.analyze_node.user_id,
         lesson_id: "lesson-sql-joins".to_string(),
         session_id: "session-sql-joins".to_string(),

@@ -1,8 +1,123 @@
 services:
-    postgres:
-      image: pgvector/pgvector:pg18
-      environment:
-        POSTGRES_USER: postgres
-        POSTGRES_PASSWORD: 1234
-      ports:
-        - "5433:5432"
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    networks:
+      - datn-network
+    depends_on:
+      - orchestrator
+
+  orchestrator:
+    build:
+      context: .
+      dockerfile: docker/orchestrator.Dockerfile
+    env_file:
+      - .env
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ORCHESTRATOR_HOST: 0.0.0.0
+      ORCHESTRATOR_PORT: ${ORCHESTRATOR_PORT:-3000}
+      SERVER_DATABASE_HOST: database-mcp
+      SERVER_DATABASE_PORT: ${SERVER_DATABASE_PORT:-3101}
+      SERVER_ROADMAP_HOST: roadmap-mcp
+      SERVER_ROADMAP_PORT: ${SERVER_ROADMAP_PORT:-3102}
+      SERVER_LESSON_HOST: lesson-mcp
+      SERVER_LESSON_PORT: ${SERVER_LESSON_PORT:-3400}
+      SERVER_RESOURCE_HOST: resource-mcp
+      SERVER_RESOURCE_PORT: ${SERVER_RESOURCE_MCP_PORT:-3300}
+    ports:
+      - "${ORCHESTRATOR_PORT:-3000}:${ORCHESTRATOR_PORT:-3000}"
+    networks:
+      - datn-network
+    depends_on:
+      - database-mcp
+      - roadmap-mcp
+      - lesson-mcp
+      - resource-mcp
+
+  database-mcp:
+    build:
+      context: .
+      dockerfile: docker/mcp-server.Dockerfile
+      args:
+        PACKAGE: database_sv
+    env_file:
+      - .env
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      SERVER_DATABASE_HOST: 0.0.0.0
+      SERVER_DATABASE_PORT: ${SERVER_DATABASE_PORT:-3101}
+    ports:
+      - "${SERVER_DATABASE_PORT:-3101}:${SERVER_DATABASE_PORT:-3101}"
+    networks:
+      - datn-network
+
+  roadmap-mcp:
+    build:
+      context: .
+      dockerfile: docker/mcp-server.Dockerfile
+      args:
+        PACKAGE: roadmap_sv
+    env_file:
+      - .env
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ROADMAP_MCP_HOST: 0.0.0.0
+      ROADMAP_MCP_PORT: ${ROADMAP_MCP_PORT:-3102}
+      RESOURCE_MCP_URL: http://resource-mcp:${SERVER_RESOURCE_MCP_PORT:-3300}/mcp
+      RESOURCE_SERVICE_URL: http://resource-api:${RESOURCE_SERVICE_API_PORT:-3200}
+      RESOURCE_SERVICE_BASE_URL: http://resource-api:${RESOURCE_SERVICE_API_PORT:-3200}
+    ports:
+      - "${ROADMAP_MCP_PORT:-3102}:${ROADMAP_MCP_PORT:-3102}"
+    networks:
+      - datn-network
+
+  lesson-mcp:
+    build:
+      context: .
+      dockerfile: docker/mcp-server.Dockerfile
+      args:
+        PACKAGE: lesson_sv
+    env_file:
+      - .env
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LESSON_MCP_HOST: 0.0.0.0
+      LESSON_MCP_PORT: ${LESSON_MCP_PORT:-3400}
+      RESOURCE_MCP_URL: http://resource-mcp:${SERVER_RESOURCE_MCP_PORT:-3300}/mcp
+      DATABASE_MCP_URL: http://database-mcp:${SERVER_DATABASE_PORT:-3101}/mcp
+    ports:
+      - "${LESSON_MCP_PORT:-3400}:${LESSON_MCP_PORT:-3400}"
+    networks:
+      - datn-network
+    depends_on:
+      - database-mcp
+      - resource-mcp
+
+  resource-mcp:
+    build:
+      context: .
+      dockerfile: docker/mcp-server.Dockerfile
+      args:
+        PACKAGE: resource_sv
+    env_file:
+      - .env
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      SERVER_RESOURCE_MCP_HOST: 0.0.0.0
+      SERVER_RESOURCE_MCP_PORT: ${SERVER_RESOURCE_MCP_PORT:-3300}
+      RESOURCE_SERVICE_BASE_URL: http://resource-api:${RESOURCE_SERVICE_API_PORT:-3200}
+    ports:
+      - "${SERVER_RESOURCE_MCP_PORT:-3300}:${SERVER_RESOURCE_MCP_PORT:-3300}"
+    networks:
+      - datn-network
+
+networks:
+  datn-network:
+    name: ${DATN_NETWORK_NAME:-datn-network}
+    external: true

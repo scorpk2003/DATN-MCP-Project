@@ -1,0 +1,75 @@
+<mxfile host="app.diagrams.net" agent="Codex" pages="2">
+  <diagram id="roadmap-mcp-dfd-level-0" name="DFD Level 0">
+    <mxGraphModel dx="1368" dy="986" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=22;fontStyle=1" value="Roadmap MCP - DFD Level 0 / Context Diagram" vertex="1">
+          <mxGeometry height="40" width="720" x="50" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="user" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="Learner / User" vertex="1">
+          <mxGeometry height="120" width="70" x="60" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="app" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0369a1;fontStyle=1" value="Client App / API" vertex="1">
+          <mxGeometry height="70" width="170" x="210" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="orch" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#92400e;fontStyle=1" value="Orchestrator Agent" vertex="1">
+          <mxGeometry height="70" width="190" x="460" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="roadmap" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#166534;fontStyle=1" value="Roadmap MCP&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;resource-aware planner&lt;/font&gt;" vertex="1">
+          <mxGeometry height="110" width="210" x="710" y="55" as="geometry" />
+        </mxCell>
+        <mxCell id="resource" parent="1" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#ede9fe;strokeColor=#6d28d9;fontStyle=1" value="Resource MCP / Resource Service&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;coverage, recommendations, gaps&lt;/font&gt;" vertex="1">
+          <mxGeometry height="100" width="220" x="1100" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="db" parent="1" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#eef2ff;strokeColor=#3730a3;fontStyle=1" value="Database MCP&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;persist roadmaps, nodes, edges, refs&lt;/font&gt;" vertex="1">
+          <mxGeometry height="100" width="220" x="440" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="lesson" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fce7f3;strokeColor=#be185d;fontStyle=1" value="Lesson MCP&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;later lesson generation&lt;/font&gt;" vertex="1">
+          <mxGeometry height="80" width="220" x="1100" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="note" parent="1" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#fff7ed;strokeColor=#c2410c" value="Boundary rules:&lt;br&gt;- Roadmap MCP does not persist DB rows&lt;br&gt;- Does not crawl or approve resources&lt;br&gt;- Does not generate full lesson content" vertex="1">
+          <mxGeometry height="120" width="300" x="700" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="user" style="endArrow=block;html=1;rounded=0;" target="app" value="learning goal, level, constraints">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="app" style="endArrow=block;html=1;rounded=0;" target="orch" value="roadmap request">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="orch" style="endArrow=block;html=1;rounded=0;" target="roadmap" value="generate_roadmap_from_goal&lt;br&gt;plan_roadmap_from_topics">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="roadmap" style="endArrow=block;html=1;rounded=0;dashed=1;" target="orch" value="roadmapDraft, graph, warnings,&lt;br&gt;coverageSummary, confidence,&lt;br&gt;databaseReadyPayload">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="roadmap" style="endArrow=block;html=1;rounded=0;" target="resource" value="coverage / recommend / search&lt;br&gt;gap / research task requests">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="resource" style="endArrow=block;html=1;rounded=0;dashed=1;" target="roadmap" value="coverageStatus, ResourceRef metadata,&lt;br&gt;missingResourceTypes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="orch" style="endArrow=block;html=1;rounded=0;" target="db" value="execute databaseReadyPayload&lt;br&gt;via Database MCP tools">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="db" style="endArrow=block;html=1;rounded=0;dashed=1;" target="orch" value="persisted roadmap ids/status">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="orch" style="endArrow=block;html=1;rounded=0;" target="lesson" value="request lessons from persisted nodes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="orch" style="endArrow=block;html=1;rounded=0;dashed=1;" target="app" value="roadmap view + warnings">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="75rhsIpiKsBSIpavI_vL" name="Page-2">
+    <mxGraphModel dx="1368" dy="986" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
