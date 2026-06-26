@@ -1,13 +1,11 @@
-// import { useState } from "react";
-import Search from "../Search";
-import Course from "../Course";
 import { Outlet } from "react-router-dom";
 
 function MainPage() {
-    return (<div className="m-4 flex-1 relative">
-        <Outlet />
-        <Search />
-    </div>);
+  return (
+    <main className="min-w-0 px-4 py-5 sm:px-6 lg:px-8">
+      <Outlet />
+    </main>
+  );
 }
 
 export default MainPage;

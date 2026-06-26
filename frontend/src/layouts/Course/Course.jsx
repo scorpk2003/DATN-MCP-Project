@@ -1,40 +1,27 @@
-import { useState } from "react";
 import Roadmap from "../../components/Roadmap";
 import Item from "../../components/Item";
+import { recommendedCourses } from "../../data/selfLearnDashboard.js";
 
-const listcourse = [
-    {
-        id: 1,
-        name: "Course 01xxxxxxxxxxxxxxxxxxxxxxxxxx",
-        description: "Description of course 01",
-        complete: 0.5,
-    },
-    {
-        id: 2,
-        name: "Course 02",
-        description: "Description of course 02",
-        complete: 0.2,
-    }
-]
+function Course({ study = false }) {
+  if (study) {
+    return <Roadmap />;
+  }
 
-function Course() {
-    let [study, SetStudy] = useState(false);
-    return (
-        <div className="m-10">
-            { study ? <Roadmap /> :
-                <div className="grid-cols-3 grid gap-7">
-                    {listcourse.map((course) => (
-                        <Item
-                            key={course.id}
-                            name={course.name}
-                            description={course.description}
-                            complete={course.complete}
-                        />
-                    ))}
-                </div>
-            }
-        </div>
-    );
+  return (
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {recommendedCourses.map((course) => (
+        <Item
+          key={course.id}
+          name={course.title}
+          description={course.description}
+          complete={course.progress}
+          duration={course.duration}
+          statusLabel={course.statusLabel}
+          tone={course.tone}
+        />
+      ))}
+    </div>
+  );
 }
 
 export default Course;
