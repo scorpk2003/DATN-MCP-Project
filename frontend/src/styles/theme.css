@@ -1,8 +1,155 @@
+:root {
+    /* Typography */
+    --sl-font-sans: "Iosevka Charon Mono", ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+    --sl-font-mono: "Iosevka Charon Mono", ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+    --sl-font-size-root: 15px;
+
+    /* Primitive palette from the Figma SelfLearn system */
+    --sl-cream-100: #fff8ea;
+    --sl-cream-200: #f3f0e7;
+    --sl-sand-300: #ffe3b3;
+    --sl-ink-900: #2a2529;
+    --sl-ink-700: #62575f;
+    --sl-line-300: #e7c98e;
+    --sl-teal-600: #1f7a78;
+    --sl-blue-600: #3957d7;
+    --sl-green-600: #5f8c46;
+    --sl-gold-600: #d99a25;
+    --sl-red-600: #b84b4b;
+    --sl-lilac-600: #7e5ce6;
+    --sl-white: #ffffff;
+
+    /* Semantic color roles */
+    --sl-bg-app: var(--sl-sand-300);
+    --sl-bg-surface: var(--sl-cream-100);
+    --sl-bg-muted: var(--sl-cream-200);
+    --sl-bg-inverse: var(--sl-ink-900);
+    --sl-text-primary: var(--sl-ink-900);
+    --sl-text-secondary: var(--sl-ink-700);
+    --sl-text-inverse: var(--sl-cream-200);
+    --sl-border-default: var(--sl-line-300);
+    --sl-action-primary: var(--sl-ink-900);
+    --sl-action-primary-text: var(--sl-cream-200);
+    --sl-action-accent: var(--sl-teal-600);
+    --sl-action-accent-text: var(--sl-white);
+
+    /* Status colors */
+    --sl-status-success: var(--sl-green-600);
+    --sl-status-success-bg: #eaf5ef;
+    --sl-status-warning: var(--sl-gold-600);
+    --sl-status-warning-bg: #fff0d8;
+    --sl-status-risk: var(--sl-red-600);
+    --sl-status-risk-bg: #ffe8e4;
+    --sl-status-info: var(--sl-blue-600);
+    --sl-status-info-bg: #e8f0ff;
+    --sl-status-agent: var(--sl-lilac-600);
+    --sl-status-agent-bg: #f0eaff;
+    --sl-status-teal-bg: #e0f2f1;
+
+    /* Sidebar and overlay alpha tokens */
+    --sl-sidebar-bg: var(--sl-ink-900);
+    --sl-sidebar-text: var(--sl-cream-200);
+    --sl-sidebar-text-muted: rgb(243 240 231 / 65%);
+    --sl-sidebar-text-subtle: rgb(243 240 231 / 45%);
+    --sl-sidebar-active-bg: var(--sl-cream-200);
+    --sl-sidebar-active-text: var(--sl-ink-900);
+    --sl-sidebar-hover-bg: rgb(255 255 255 / 10%);
+    --sl-sidebar-border: rgb(231 201 142 / 20%);
+    --sl-progress-track: rgb(42 37 41 / 12%);
+    --sl-inverse-panel-muted: rgb(243 240 231 / 60%);
+    --sl-inverse-panel-subtle: rgb(243 240 231 / 45%);
+    --sl-inverse-surface: rgb(255 255 255 / 6%);
+
+    /* Spacing scale */
+    --sl-space-4: 0.25rem;
+    --sl-space-8: 0.5rem;
+    --sl-space-12: 0.75rem;
+    --sl-space-16: 1rem;
+    --sl-space-20: 1.25rem;
+    --sl-space-24: 1.5rem;
+    --sl-space-32: 2rem;
+    --sl-space-40: 2.5rem;
+    --sl-space-48: 3rem;
+    --sl-space-64: 4rem;
+
+    /* Radius scale */
+    --sl-radius-sm: 0.25rem;
+    --sl-radius-md: 0.5rem;
+    --sl-radius-lg: 0.75rem;
+    --sl-radius-xl: 1rem;
+    --sl-radius-full: 999px;
+
+    /* Layout */
+    --sl-sidebar-width: 16.25rem;
+    --sl-right-panel-sm: 12.5rem;
+    --sl-right-panel-md: 21.25rem;
+    --sl-page-max: 90rem;
+    --sl-topbar-height: 4.5rem;
+
+    /* Typography scale */
+    --sl-text-display: 3rem;
+    --sl-leading-display: 3.5rem;
+    --sl-text-h1: 2.125rem;
+    --sl-leading-h1: 2.625rem;
+    --sl-text-h2: 1.625rem;
+    --sl-leading-h2: 2.125rem;
+    --sl-text-h3: 1.25rem;
+    --sl-leading-h3: 1.75rem;
+    --sl-text-body-lg: 1.125rem;
+    --sl-leading-body-lg: 1.75rem;
+    --sl-text-body: 0.9375rem;
+    --sl-leading-body: 1.4375rem;
+    --sl-text-body-sm: 0.8125rem;
+    --sl-leading-body-sm: 1.25rem;
+    --sl-text-caption: 0.6875rem;
+    --sl-leading-caption: 1rem;
+    --sl-text-code: 0.8125rem;
+    --sl-leading-code: 1.25rem;
+
+    /* Effects */
+    --sl-shadow-sm: 0 2px 8px rgb(42 37 41 / 8%);
+    --sl-shadow-md: 0 8px 24px rgb(42 37 41 / 12%);
+    --sl-shadow-lg: 0 18px 48px rgb(42 37 41 / 16%);
+}
+
 @theme {
-    --font-primary: "Iosevka Charon Mono", monospace;
+    /* Backward-compatible names used by the original prototype */
+    --font-primary: var(--sl-font-sans);
+    --color-txt: var(--sl-text-primary);
+    --color-primary: var(--sl-bg-muted);
+    --color-background: var(--sl-bg-app);
 
-    --color-txt: #2a2529;
-    --color-primary: #f3f0e7;
+    /* SelfLearn semantic Tailwind aliases */
+    --font-sans: var(--sl-font-sans);
+    --font-mono: var(--sl-font-mono);
 
-    --color-background: #ffe3b3;
+    --color-surface: var(--sl-bg-surface);
+    --color-surface-muted: var(--sl-bg-muted);
+    --color-ink: var(--sl-text-primary);
+    --color-ink-muted: var(--sl-text-secondary);
+    --color-inverse: var(--sl-bg-inverse);
+    --color-inverse-text: var(--sl-text-inverse);
+    --color-line: var(--sl-border-default);
+    --color-accent: var(--sl-action-accent);
+    --color-accent-text: var(--sl-action-accent-text);
+
+    --color-status-success: var(--sl-status-success);
+    --color-status-success-bg: var(--sl-status-success-bg);
+    --color-status-warning: var(--sl-status-warning);
+    --color-status-warning-bg: var(--sl-status-warning-bg);
+    --color-status-risk: var(--sl-status-risk);
+    --color-status-risk-bg: var(--sl-status-risk-bg);
+    --color-status-info: var(--sl-status-info);
+    --color-status-info-bg: var(--sl-status-info-bg);
+    --color-status-agent: var(--sl-status-agent);
+    --color-status-agent-bg: var(--sl-status-agent-bg);
+
+    --radius-sl-sm: var(--sl-radius-sm);
+    --radius-sl-md: var(--sl-radius-md);
+    --radius-sl-lg: var(--sl-radius-lg);
+    --radius-sl-xl: var(--sl-radius-xl);
+
+    --shadow-sl-sm: var(--sl-shadow-sm);
+    --shadow-sl-md: var(--sl-shadow-md);
+    --shadow-sl-lg: var(--sl-shadow-lg);
 }

@@ -1,76 +1,66 @@
-import { faEllipsisVertical } from "@fortawesome/free-solid-svg-icons";
+import { faBookOpen, faEllipsisVertical, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { NavLink } from "react-router-dom";
+import { recentChats, sidebarItems } from "../../../data/selfLearnDashboard.js";
+import { Button } from "../../../components/ui";
 
-const listchat = [
-    {
-        id: 1,
-        des: "List Chat 01xxxxxxxxxxxxxxxxxx",
-    },
-    {
-        id: 2,
-        des: "List Chat 02",
-    },
-    {
-        id: 3,
-        des: "List Chat 03",
-    },
-    {
-        id: 4,
-        des: "List Chat 04",
-    },
-    {
-        id: 5,
-        des: "List Chat 05",
-    },
-    {
-        id: 6,
-        des: "List Chat 06",
-    },
-    {
-        id: 7,
-        des: "List Chat 07",
-    },
-    {
-        id: 8,
-        des: "List Chat 08",
-    },
-    {
-        id: 9,
-        des: "List Chat 09",
-    },
-    {
-        id: 10,
-        des: "List Chat 10",
-    },
-    {
-        id: 11,
-        des: "List Chat 11",
-    },
-    {
-        id: 12,
-        des: "List Chat 12",
-    }
-]
 function RcmBeginCourse() {
-
-    const handleClick = () => {
-        console.log("Clicked");
-    }
-    return ( 
-        <div className="p-8 bg-txt rounded-r-lg max-w-sm w-55 items-center flex flex-col gap-5 **:bg-transparent block">
-            <div className="basis-2/5 items-center flex">
-                <p className="text-primary font-bold text-2xl">Infomation</p>
-            </div>
-            <nav className="p-2 my-3 h-full max-w-sm overflow-y-auto scroll-smooth flex flex-col gap-2 bg-transparent rounded-lg scroll-my-2">
-                {listchat.map((chat) => (
-                    <div key={ chat.id } className="h-7.5 flex flex-row items-center w-40 p-2 rounded-lg bg-primary/10 cursor-pointer hover:bg-primary/20 transition-colors duration-200">
-                        <p className="truncate text-sm text-primary max-w-30 items-center basis-5/6 inline-flex">{ chat.des }</p>
-                        <FontAwesomeIcon icon={faEllipsisVertical}  className="right-0 basis-1/6" onClick={handleClick}/>
-                    </div>
-                ))}
-            </nav>
+  return (
+    <aside className="flex h-full min-h-screen flex-col gap-6 bg-[var(--bg-inverse)] px-4 py-5 text-[var(--text-inverse)] lg:sticky lg:top-0">
+      <div className="flex items-center gap-3 px-2">
+        <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--sl-inverse-surface)]">
+          <FontAwesomeIcon icon={faBookOpen} />
         </div>
-     );
+        <div className="min-w-0">
+          <p className="text-lg font-bold leading-tight">SelfLearn</p>
+          <p className="truncate text-xs text-[var(--sl-sidebar-text-muted)]">Adaptive study agent</p>
+        </div>
+      </div>
+
+      <Button variant="accent" full>
+        <FontAwesomeIcon icon={faPlus} />
+        Lộ trình mới
+      </Button>
+
+      <nav className="space-y-1" aria-label="Điều hướng chính">
+        {sidebarItems.map((item) => (
+          <NavLink
+            key={item.id}
+            to={item.path}
+            end={item.path === "/"}
+            className={({ isActive }) =>
+              `flex w-full items-center rounded-[var(--radius-md)] px-3 py-2 text-left text-sm font-semibold transition-colors ${
+                isActive
+                  ? "bg-[var(--sl-sidebar-hover-bg)] text-[var(--text-inverse)]"
+                  : "text-[var(--sl-sidebar-text-muted)] hover:bg-[var(--sl-sidebar-hover-bg)] hover:text-[var(--text-inverse)]"
+              }`
+            }
+          >
+            <span className="truncate">{item.label}</span>
+          </NavLink>
+        ))}
+      </nav>
+
+      <section className="min-h-0 flex-1">
+        <div className="mb-2 flex items-center justify-between px-2">
+          <h2 className="text-xs font-bold uppercase tracking-normal text-[var(--sl-sidebar-text-subtle)]">
+            Gần đây
+          </h2>
+        </div>
+        <div className="space-y-1 overflow-y-auto pr-1">
+          {recentChats.map((chat) => (
+            <div
+              key={chat.id}
+              className="flex items-center gap-2 rounded-[var(--radius-md)] px-3 py-2 text-sm text-[var(--sl-sidebar-text-muted)] hover:bg-[var(--sl-sidebar-hover-bg)] hover:text-[var(--text-inverse)]"
+            >
+              <span className="min-w-0 flex-1 truncate">{chat.label}</span>
+              <FontAwesomeIcon icon={faEllipsisVertical} className="shrink-0 text-xs" />
+            </div>
+          ))}
+        </div>
+      </section>
+    </aside>
+  );
 }
 
 export default RcmBeginCourse;
