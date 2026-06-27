@@ -37,7 +37,7 @@ export function Button({
     <button
       type={type}
       className={cx(
-        "inline-flex shrink-0 items-center justify-center border font-semibold",
+        "inline-flex shrink-0 cursor-pointer items-center justify-center border font-semibold",
         "transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]",
         "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60",
         full && "w-full",

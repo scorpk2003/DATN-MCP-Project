@@ -9,6 +9,7 @@ export function LearningHero({
   onPromptChange,
   onPromptSelect,
   onSubmit,
+  submitLoading = false,
 }) {
   const weeklyProgress = learner.completedHours / learner.weeklyGoalHours;
 
@@ -32,6 +33,7 @@ export function LearningHero({
           onChange={onPromptChange}
           onSubmit={onSubmit}
           submitLabel="Bắt đầu"
+          submitLoading={submitLoading}
           actions={
             quickPrompts.map((item) => (
               <Button

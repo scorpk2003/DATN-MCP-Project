@@ -32,8 +32,9 @@ export function Card({
         toneClasses[tone] || toneClasses.surface,
         paddingClasses[padding] || paddingClasses.md,
         interactive &&
-          "transition-colors duration-150 hover:border-[var(--border-accent)] hover:bg-[var(--bg-surface-hover)]",
-        selected && "border-[var(--border-accent)] ring-2 ring-[var(--focus-ring)]",
+          "cursor-pointer transition-[background-color,border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:border-[var(--border-accent)] hover:bg-[var(--bg-surface-hover)] hover:shadow-[var(--shadow-card-hover)]",
+        selected &&
+          "border-[var(--border-accent)] bg-[var(--bg-surface-strong)] ring-2 ring-[var(--focus-ring)]",
         className,
       ),
       ...props,

@@ -1,10 +1,25 @@
 import Roadmap from "../../components/Roadmap";
 import Item from "../../components/Item";
-import { recommendedCourses } from "../../data/selfLearnDashboard.js";
+import { EmptyState, ErrorState, LoadingState } from "../../components/ui";
+import { useRecommendedCourses } from "../../hooks/useDashboardData.js";
 
 function Course({ study = false }) {
+  const { data: recommendedCourses, error, loading, reload } = useRecommendedCourses();
+
   if (study) {
     return <Roadmap />;
+  }
+
+  if (loading) {
+    return <LoadingState layout="grid" title="Đang tải khoá học..." />;
+  }
+
+  if (error) {
+    return <ErrorState onRetry={reload} />;
+  }
+
+  if (recommendedCourses.length === 0) {
+    return <EmptyState title="Chưa có khoá học được gợi ý" />;
   }
 
   return (

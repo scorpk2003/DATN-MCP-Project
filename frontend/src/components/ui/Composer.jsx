@@ -8,6 +8,7 @@ export function Composer({
   onSubmit,
   placeholder = "Bạn muốn học gì hôm nay?",
   submitLabel = "Tạo lộ trình",
+  submitLoading = false,
   children,
   actions,
   minRows = 3,
@@ -38,7 +39,7 @@ export function Composer({
       {children ? <div className="flex flex-wrap gap-2">{children}</div> : null}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-h-10 flex-wrap items-center gap-2">{actions}</div>
-        <Button type="submit" disabled={disabled} className="sm:min-w-[140px]">
+        <Button type="submit" disabled={disabled} loading={submitLoading} className="sm:min-w-[140px]">
           {submitLabel}
         </Button>
       </div>

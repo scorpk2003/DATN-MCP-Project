@@ -3,10 +3,30 @@ services:
     build:
       context: .
       dockerfile: docker/frontend.Dockerfile
+      args:
+        VITE_AGENT_GATEWAY_URL: ${VITE_AGENT_GATEWAY_URL:-http://localhost:4000}
     env_file:
       - .env
     ports:
       - "${FRONTEND_PORT:-5173}:80"
+    networks:
+      - datn-network
+    depends_on:
+      - agent-gateway
+
+  agent-gateway:
+    build:
+      context: .
+      dockerfile: docker/agent-gateway.Dockerfile
+    env_file:
+      - .env
+    environment:
+      AGENT_GATEWAY_HOST: 0.0.0.0
+      AGENT_GATEWAY_PORT: ${AGENT_GATEWAY_PORT:-4000}
+      ORCHESTRATOR_BASE_URL: http://orchestrator:${ORCHESTRATOR_PORT:-3000}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+    ports:
+      - "${AGENT_GATEWAY_PORT:-4000}:${AGENT_GATEWAY_PORT:-4000}"
     networks:
       - datn-network
     depends_on:

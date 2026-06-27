@@ -20,18 +20,57 @@
     --sl-white: #ffffff;
 
     /* Semantic color roles */
-    --sl-bg-app: var(--sl-sand-300);
-    --sl-bg-surface: var(--sl-cream-100);
-    --sl-bg-muted: var(--sl-cream-200);
+    --sl-bg-app: #f0e3c9;
+    --sl-bg-surface: #fffaf0;
+    --sl-bg-surface-strong: var(--sl-white);
+    --sl-bg-muted: #f6eddc;
+    --sl-bg-hover: #fff2d4;
     --sl-bg-inverse: var(--sl-ink-900);
     --sl-text-primary: var(--sl-ink-900);
     --sl-text-secondary: var(--sl-ink-700);
     --sl-text-inverse: var(--sl-cream-200);
-    --sl-border-default: var(--sl-line-300);
+    --sl-border-default: #d5b875;
+    --sl-border-subtle: #ead7ad;
+    --sl-border-accent: var(--sl-teal-600);
+    --sl-focus-ring: rgb(31 122 120 / 24%);
     --sl-action-primary: var(--sl-ink-900);
     --sl-action-primary-text: var(--sl-cream-200);
+    --sl-action-primary-hover: #171316;
     --sl-action-accent: var(--sl-teal-600);
     --sl-action-accent-text: var(--sl-white);
+    --sl-action-accent-hover: #155e5d;
+
+    /* Runtime aliases used by component primitives */
+    --bg-canvas: var(--sl-bg-app);
+    --bg-surface: var(--sl-bg-surface);
+    --bg-surface-strong: var(--sl-bg-surface-strong);
+    --bg-surface-muted: var(--sl-bg-muted);
+    --bg-surface-hover: var(--sl-bg-hover);
+    --bg-inverse: var(--sl-bg-inverse);
+    --text-primary: var(--sl-text-primary);
+    --text-secondary: var(--sl-text-secondary);
+    --text-muted: var(--sl-text-secondary);
+    --text-inverse: var(--sl-text-inverse);
+    --border-primary: var(--sl-border-default);
+    --border-secondary: var(--sl-border-subtle);
+    --border-accent: var(--sl-border-accent);
+    --focus-ring: var(--sl-focus-ring);
+    --action-primary: var(--sl-action-primary);
+    --action-primary-text: var(--sl-action-primary-text);
+    --action-primary-hover: var(--sl-action-primary-hover);
+    --action-accent: var(--sl-action-accent);
+    --action-accent-text: var(--sl-action-accent-text);
+    --action-accent-hover: var(--sl-action-accent-hover);
+    --color-success: var(--sl-status-success);
+    --color-warning: var(--sl-status-warning);
+    --color-risk: var(--sl-status-risk);
+    --color-info: var(--sl-status-info);
+    --color-agent: var(--sl-status-agent);
+    --status-success-bg: var(--sl-status-success-bg);
+    --status-warning-bg: var(--sl-status-warning-bg);
+    --status-risk-bg: var(--sl-status-risk-bg);
+    --status-info-bg: var(--sl-status-info-bg);
+    --status-agent-bg: var(--sl-status-agent-bg);
 
     /* Status colors */
     --sl-status-success: var(--sl-green-600);
@@ -55,7 +94,11 @@
     --sl-sidebar-active-text: var(--sl-ink-900);
     --sl-sidebar-hover-bg: rgb(255 255 255 / 10%);
     --sl-sidebar-border: rgb(231 201 142 / 20%);
+    --sidebar-border: var(--sl-sidebar-border);
+    --sl-overlay-scrim: rgb(42 37 41 / 55%);
+    --overlay-scrim: var(--sl-overlay-scrim);
     --sl-progress-track: rgb(42 37 41 / 12%);
+    --progress-track: var(--sl-progress-track);
     --sl-inverse-panel-muted: rgb(243 240 231 / 60%);
     --sl-inverse-panel-subtle: rgb(243 240 231 / 45%);
     --sl-inverse-surface: rgb(255 255 255 / 6%);
@@ -78,6 +121,10 @@
     --sl-radius-lg: 0.75rem;
     --sl-radius-xl: 1rem;
     --sl-radius-full: 999px;
+    --radius-sm: var(--sl-radius-sm);
+    --radius-md: var(--sl-radius-md);
+    --radius-lg: var(--sl-radius-lg);
+    --radius-card: var(--sl-radius-md);
 
     /* Layout */
     --sl-sidebar-width: 16.25rem;
@@ -107,9 +154,14 @@
     --sl-leading-code: 1.25rem;
 
     /* Effects */
-    --sl-shadow-sm: 0 2px 8px rgb(42 37 41 / 8%);
-    --sl-shadow-md: 0 8px 24px rgb(42 37 41 / 12%);
-    --sl-shadow-lg: 0 18px 48px rgb(42 37 41 / 16%);
+    --sl-shadow-sm: 0 2px 8px rgb(42 37 41 / 10%);
+    --sl-shadow-md: 0 10px 28px rgb(42 37 41 / 14%);
+    --sl-shadow-lg: 0 18px 48px rgb(42 37 41 / 18%);
+    --shadow-card: var(--sl-shadow-sm);
+    --shadow-card-hover: var(--sl-shadow-md);
+    --shadow-sm: var(--sl-shadow-sm);
+    --shadow-md: var(--sl-shadow-md);
+    --shadow-lg: var(--sl-shadow-lg);
 }
 
 @theme {
