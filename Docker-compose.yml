@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: docker/frontend.Dockerfile
       args:
-        VITE_AGENT_GATEWAY_URL: ${VITE_AGENT_GATEWAY_URL:-http://localhost:4000}
+        VITE_AGENT_GATEWAY_URL: ${VITE_AGENT_GATEWAY_URL:-/api/agent-gateway}
     env_file:
       - .env
     ports:
@@ -26,7 +26,7 @@ services:
       ORCHESTRATOR_BASE_URL: http://orchestrator:${ORCHESTRATOR_PORT:-3000}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
     ports:
-      - "${AGENT_GATEWAY_PORT:-4000}:${AGENT_GATEWAY_PORT:-4000}"
+      - "${AGENT_GATEWAY_HOST_PORT:-4000}:${AGENT_GATEWAY_PORT:-4000}"
     networks:
       - datn-network
     depends_on:
@@ -42,6 +42,17 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       ORCHESTRATOR_HOST: 0.0.0.0
       ORCHESTRATOR_PORT: ${ORCHESTRATOR_PORT:-3000}
+      ORCHESTRATOR_MCP_SERVERS: ${ORCHESTRATOR_MCP_SERVERS:-database,resource,roadmap,lesson}
+      ORCHESTRATOR_OPTIONAL_MCP_SERVERS: ${ORCHESTRATOR_OPTIONAL_MCP_SERVERS:-}
+      MCP_CONNECT_TIMEOUT_MS: ${MCP_CONNECT_TIMEOUT_MS:-3000}
+      MCP_LIST_TOOLS_TIMEOUT_MS: ${MCP_LIST_TOOLS_TIMEOUT_MS:-3000}
+      MCP_CALL_TOOL_TIMEOUT_MS: ${MCP_CALL_TOOL_TIMEOUT_MS:-15000}
+      MCP_CALL_RETRIES: ${MCP_CALL_RETRIES:-1}
+      MCP_RETRY_BACKOFF_MS: ${MCP_RETRY_BACKOFF_MS:-150}
+      AGENT_MODEL: ${AGENT_MODEL:-openai/gpt-oss-120b:free}
+      AGENT_MAX_STEPS: ${AGENT_MAX_STEPS:-8}
+      AGENT_MAX_REPLANS: ${AGENT_MAX_REPLANS:-2}
+      AGENT_MAX_PARAM_REPAIRS: ${AGENT_MAX_PARAM_REPAIRS:-1}
       SERVER_DATABASE_HOST: database-mcp
       SERVER_DATABASE_PORT: ${SERVER_DATABASE_PORT:-3101}
       SERVER_ROADMAP_HOST: roadmap-mcp
@@ -51,7 +62,7 @@ services:
       SERVER_RESOURCE_HOST: resource-mcp
       SERVER_RESOURCE_PORT: ${SERVER_RESOURCE_MCP_PORT:-3300}
     ports:
-      - "${ORCHESTRATOR_PORT:-3000}:${ORCHESTRATOR_PORT:-3000}"
+      - "${ORCHESTRATOR_HOST_PORT:-3000}:${ORCHESTRATOR_PORT:-3000}"
     networks:
       - datn-network
     depends_on:
@@ -70,10 +81,11 @@ services:
       - .env
     environment:
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:-localhost,127.0.0.1,::1,database-mcp,roadmap-mcp,resource-mcp,lesson-mcp}
       SERVER_DATABASE_HOST: 0.0.0.0
       SERVER_DATABASE_PORT: ${SERVER_DATABASE_PORT:-3101}
     ports:
-      - "${SERVER_DATABASE_PORT:-3101}:${SERVER_DATABASE_PORT:-3101}"
+      - "${SERVER_DATABASE_HOST_PORT:-3101}:${SERVER_DATABASE_PORT:-3101}"
     networks:
       - datn-network
 
@@ -87,13 +99,14 @@ services:
       - .env
     environment:
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:-localhost,127.0.0.1,::1,database-mcp,roadmap-mcp,resource-mcp,lesson-mcp}
       ROADMAP_MCP_HOST: 0.0.0.0
       ROADMAP_MCP_PORT: ${ROADMAP_MCP_PORT:-3102}
       RESOURCE_MCP_URL: http://resource-mcp:${SERVER_RESOURCE_MCP_PORT:-3300}/mcp
       RESOURCE_SERVICE_URL: http://resource-api:${RESOURCE_SERVICE_API_PORT:-3200}
       RESOURCE_SERVICE_BASE_URL: http://resource-api:${RESOURCE_SERVICE_API_PORT:-3200}
     ports:
-      - "${ROADMAP_MCP_PORT:-3102}:${ROADMAP_MCP_PORT:-3102}"
+      - "${ROADMAP_MCP_HOST_PORT:-3102}:${ROADMAP_MCP_PORT:-3102}"
     networks:
       - datn-network
 
@@ -107,12 +120,13 @@ services:
       - .env
     environment:
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:-localhost,127.0.0.1,::1,database-mcp,roadmap-mcp,resource-mcp,lesson-mcp}
       LESSON_MCP_HOST: 0.0.0.0
       LESSON_MCP_PORT: ${LESSON_MCP_PORT:-3400}
       RESOURCE_MCP_URL: http://resource-mcp:${SERVER_RESOURCE_MCP_PORT:-3300}/mcp
       DATABASE_MCP_URL: http://database-mcp:${SERVER_DATABASE_PORT:-3101}/mcp
     ports:
-      - "${LESSON_MCP_PORT:-3400}:${LESSON_MCP_PORT:-3400}"
+      - "${LESSON_MCP_HOST_PORT:-3400}:${LESSON_MCP_PORT:-3400}"
     networks:
       - datn-network
     depends_on:
@@ -129,11 +143,12 @@ services:
       - .env
     environment:
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:-localhost,127.0.0.1,::1,database-mcp,roadmap-mcp,resource-mcp,lesson-mcp}
       SERVER_RESOURCE_MCP_HOST: 0.0.0.0
       SERVER_RESOURCE_MCP_PORT: ${SERVER_RESOURCE_MCP_PORT:-3300}
       RESOURCE_SERVICE_BASE_URL: http://resource-api:${RESOURCE_SERVICE_API_PORT:-3200}
     ports:
-      - "${SERVER_RESOURCE_MCP_PORT:-3300}:${SERVER_RESOURCE_MCP_PORT:-3300}"
+      - "${SERVER_RESOURCE_MCP_HOST_PORT:-3300}:${SERVER_RESOURCE_MCP_PORT:-3300}"
     networks:
       - datn-network
 

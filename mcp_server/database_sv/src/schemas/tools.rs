@@ -20,6 +20,17 @@ pub struct CreateUserParam {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct UpsertUserParam {
+    #[schemars(description = "Firebase unique user id. Maps to users.firebase_uid.")]
+    pub firebase_id: String,
+    #[schemars(description = "Optional human-readable user display name.")]
+    pub display_name: Option<String>,
+    #[schemars(description = "Optional user email address.")]
+    #[schemars(email)]
+    pub email: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 pub struct GetUserByIdParam {
     #[schemars(description = "Firebase unique user id. Maps to users.firebase_uid.")]
     pub firebase_id: String,
@@ -27,8 +38,10 @@ pub struct GetUserByIdParam {
 
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 pub struct CreateProjectParam {
-    #[schemars(description = "Owner user UUID.")]
-    pub user_id: Uuid,
+    #[schemars(
+        description = "Owner user UUID or Firebase uid. Firebase uid is resolved through users.firebase_uid."
+    )]
+    pub user_id: String,
     #[schemars(description = "Project title.")]
     #[schemars(length(min = 1, max = 255))]
     pub title: String,
@@ -53,8 +66,10 @@ pub struct UpdateProjectParam {
 
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 pub struct ListProjectsParam {
-    #[schemars(description = "Owner user UUID.")]
-    pub user_id: Uuid,
+    #[schemars(
+        description = "Owner user UUID or Firebase uid. Firebase uid is resolved through users.firebase_uid."
+    )]
+    pub user_id: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
@@ -254,4 +269,55 @@ pub struct SearchParam {
 pub struct UserIdParam {
     #[schemars(description = "User UUID.")]
     pub user_id: Uuid,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct CreateLessonParam {
+    #[schemars(description = "Idempotency key produced by Lesson MCP finalizer.")]
+    #[serde(rename = "idempotencyKey", alias = "idempotency_key")]
+    pub idempotency_key: String,
+    #[schemars(description = "Lesson title.")]
+    pub title: String,
+    #[schemars(description = "Lesson topic.")]
+    pub topic: String,
+    #[schemars(description = "Lesson level.")]
+    pub level: String,
+    #[schemars(description = "Learning objectives.")]
+    pub objectives: Vec<String>,
+    #[schemars(description = "Prerequisites.")]
+    pub prerequisites: Vec<String>,
+    #[serde(rename = "estimatedMinutes", alias = "estimated_minutes")]
+    pub estimated_minutes: Option<i32>,
+    #[schemars(description = "Lesson status.")]
+    pub status: Option<String>,
+    #[serde(rename = "assessmentRubric", alias = "assessment_rubric")]
+    pub assessment_rubric: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct CreateLessonBlockParam {
+    #[serde(rename = "lessonId", alias = "lesson_id")]
+    pub lesson_id: Uuid,
+    pub block: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct LinkLessonResourceParam {
+    #[serde(rename = "lessonId", alias = "lesson_id")]
+    pub lesson_id: Uuid,
+    pub resource: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct CreateLessonExerciseParam {
+    #[serde(rename = "lessonId", alias = "lesson_id")]
+    pub lesson_id: Uuid,
+    pub exercise: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct CreateLessonQuizParam {
+    #[serde(rename = "lessonId", alias = "lesson_id")]
+    pub lesson_id: Uuid,
+    pub quiz: serde_json::Value,
 }

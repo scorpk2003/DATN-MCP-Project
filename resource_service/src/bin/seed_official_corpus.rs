@@ -45,8 +45,17 @@ struct InvalidSeed {
     reason: String,
 }
 
+fn load_env() {
+    dotenv::dotenv().ok();
+    for path in ["../.env", "../../.env", "../../../.env"] {
+        dotenv::from_path(path).ok();
+    }
+}
+
 #[tokio::main]
 async fn main() -> AppResult<()> {
+    load_env();
+
     let args = Args::parse()?;
     let (catalog, seeds, topics) = load_validated_manifests(
         &args.source_catalog,

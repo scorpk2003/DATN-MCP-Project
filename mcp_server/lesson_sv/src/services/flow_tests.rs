@@ -60,7 +60,7 @@ fn happy_path_generates_validates_finalizes_grades_and_completes() {
     assert!(validation.passed);
 
     let payload = finalizer::build_lesson_payload(draft.clone(), "ready".to_string());
-    assert_eq!(payload["notPersisted"], true);
+    assert_eq!(payload["notPersisted"], false);
 
     let grading = grading::grade_answer(
         "This answer explains concept accuracy with evidence and practical application because INNER JOIN combines matching rows from both tables.",

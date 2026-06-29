@@ -56,8 +56,9 @@ impl LessonServer {
         let addr = format!("{}:{}", self.config.host.clone(), self.config.port.clone());
         info!("\tStarting Lesson MCP Server at: {addr}");
 
-        let config =
-            StreamableHttpServerConfig::default().with_cancellation_token(CancellationToken::new());
+        let config = StreamableHttpServerConfig::default()
+            .with_allowed_hosts(allowed_mcp_hosts())
+            .with_cancellation_token(CancellationToken::new());
         let service = StreamableHttpService::new(
             move || Ok(self.clone()),
             Arc::new(LocalSessionManager::default()),
@@ -580,6 +581,18 @@ impl Drop for LessonServer {
 
 fn tool_error(request_id: &Option<String>, error: crate::error::LessonToolError) -> Value {
     crate::error::tool_error_envelope(error, request_id.as_deref())
+}
+
+fn allowed_mcp_hosts() -> Vec<String> {
+    dotenv::var("MCP_ALLOWED_HOSTS")
+        .unwrap_or_else(|_| {
+            "localhost,127.0.0.1,::1,database-mcp,roadmap-mcp,resource-mcp,lesson-mcp".to_string()
+        })
+        .split(',')
+        .map(str::trim)
+        .filter(|host| !host.is_empty())
+        .map(ToString::to_string)
+        .collect()
 }
 
 #[tool_handler]

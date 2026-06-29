@@ -6,6 +6,8 @@ export type GatewayConfig = {
   orchestratorBaseUrl: string;
   orchestratorTimeoutMs: number;
   corsOrigin: string;
+  resourceServiceBaseUrl: string;
+  allowDevAuthContext: boolean;
 };
 
 function readNumber(name: string, fallback: number) {
@@ -24,4 +26,6 @@ export const config: GatewayConfig = {
   orchestratorBaseUrl: process.env.ORCHESTRATOR_BASE_URL || "http://localhost:3000",
   orchestratorTimeoutMs: readNumber("ORCHESTRATOR_TIMEOUT_MS", 120000),
   corsOrigin: process.env.CORS_ORIGIN || "http://localhost:5173",
+  resourceServiceBaseUrl: process.env.RESOURCE_SERVICE_BASE_URL || "http://localhost:3200",
+  allowDevAuthContext: process.env.AGENT_GATEWAY_ALLOW_DEV_AUTH !== "false",
 };

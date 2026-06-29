@@ -5,7 +5,7 @@ import {
   faPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../auth/useAuth.js";
 import { Button, InlineAlert, Skeleton } from "../../../components/ui";
 import { useNavigationData } from "../../../hooks/useNavigationData.js";
@@ -14,6 +14,17 @@ function RcmBeginCourse() {
   const { signOut, user } = useAuth();
   const { data, error, loading } = useNavigationData();
   const { recentChats, sidebarItems } = data;
+  const navigate = useNavigate();
+
+  const handleCreateRoadmap = () => {
+    const draftPrompt = "Tạo lộ trình học mới";
+    navigate("/", {
+      state: {
+        draftPrompt,
+      },
+    });
+    window.dispatchEvent(new CustomEvent("selflearn:create-roadmap", { detail: { draftPrompt } }));
+  };
 
   return (
     <aside className="flex h-full min-h-0 flex-col gap-6 bg-[var(--bg-inverse)] px-4 py-5 text-[var(--text-inverse)] lg:min-h-screen lg:sticky lg:top-0">
@@ -27,7 +38,7 @@ function RcmBeginCourse() {
         </div>
       </div>
 
-      <Button variant="accent" full>
+      <Button variant="accent" full onClick={handleCreateRoadmap}>
         <FontAwesomeIcon icon={faPlus} />
         Lộ trình mới
       </Button>

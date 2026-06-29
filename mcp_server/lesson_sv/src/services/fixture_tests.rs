@@ -79,7 +79,7 @@ fn sql_joins_fixture_runs_through_lesson_pipeline() {
     );
 
     let payload = finalizer::build_lesson_payload(draft.clone(), "ready".to_string());
-    assert_eq!(payload["notPersisted"], true);
+    assert_eq!(payload["notPersisted"], false);
 
     let grade = grading::grade_answer(
         "This answer explains concept accuracy with evidence and practical application because INNER JOIN combines matching rows and LEFT JOIN keeps unmatched left rows.",

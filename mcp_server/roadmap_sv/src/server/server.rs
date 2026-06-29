@@ -133,8 +133,9 @@ impl RoadmapServer {
         let addr = format!("{}:{}", self.config.host.clone(), self.config.port.clone());
         info!("\tStarting Roadmap Server at: {addr}");
 
-        let config =
-            StreamableHttpServerConfig::default().with_cancellation_token(CancellationToken::new());
+        let config = StreamableHttpServerConfig::default()
+            .with_allowed_hosts(allowed_mcp_hosts())
+            .with_cancellation_token(CancellationToken::new());
         let service = StreamableHttpService::new(
             move || Ok(self.clone()),
             Arc::new(LocalSessionManager::default()),
@@ -541,6 +542,7 @@ impl RoadmapServer {
         .await;
         let mut roadmap_graph = graph_builder::build_roadmap_graph(
             normalized_request.user_id.clone(),
+            normalized_request.project_id.clone(),
             &goal_profile,
             &blueprint_selection.blueprint,
             &bound_topics,
@@ -637,6 +639,7 @@ impl RoadmapServer {
                 .await;
         let mut roadmap_graph = graph_builder::build_roadmap_graph(
             param.user_id.clone(),
+            None,
             &goal_profile,
             &blueprint,
             &bound_topics,
@@ -750,6 +753,18 @@ fn resource_error_envelope(error: &ResourceClientError) -> Value {
         .unwrap_or(true);
 
     error_envelope(&code, &message, details, retryable)
+}
+
+fn allowed_mcp_hosts() -> Vec<String> {
+    dotenv::var("MCP_ALLOWED_HOSTS")
+        .unwrap_or_else(|_| {
+            "localhost,127.0.0.1,::1,database-mcp,roadmap-mcp,resource-mcp,lesson-mcp".to_string()
+        })
+        .split(',')
+        .map(str::trim)
+        .filter(|host| !host.is_empty())
+        .map(ToString::to_string)
+        .collect()
 }
 
 fn collect_preview_warnings(

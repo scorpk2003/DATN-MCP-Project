@@ -5,10 +5,12 @@ import { GatewayError } from "../services/errors.js";
 import { eventBus } from "../services/eventBus.js";
 import { sessionStore } from "../services/sessionStore.js";
 import type { RunProcessor } from "../services/runProcessor.js";
+import { buildAuthContext } from "../services/authContext.js";
+import type { GatewayConfig } from "../config.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { routeParam } from "./params.js";
 
-export function intentsRouter(runProcessor: RunProcessor) {
+export function intentsRouter(runProcessor: RunProcessor, config: GatewayConfig) {
   const router = Router();
 
   router.post(
@@ -29,6 +31,7 @@ export function intentsRouter(runProcessor: RunProcessor) {
         throw new GatewayError("SESSION_NOT_FOUND", "Session not found.", 404);
       }
 
+      const authContext = buildAuthContext(request, config, session.userId);
       sessionStore.addUserMessage(sessionId, run.id, intentToUserMessage(input.data.intent));
       eventBus.publish(sessionId, run.id, {
         type: "run.status_changed",
@@ -38,6 +41,7 @@ export function intentsRouter(runProcessor: RunProcessor) {
         sessionId,
         runId: run.id,
         intent: input.data.intent,
+        authContext,
       });
 
       response.status(202).json({

@@ -8,7 +8,7 @@ use tracing::info;
 use crate::tools::common;
 use crate::{
     provider::SchemaProvider,
-    schemas::{CreateUserParam, GetUserByIdParam},
+    schemas::{CreateUserParam, GetUserByIdParam, UpsertUserParam},
 };
 
 #[derive(Debug, Clone)]
@@ -40,6 +40,30 @@ impl UserTool {
         Ok(common::user(row))
     }
 
+    pub async fn upsert_user(&self, param: UpsertUserParam) -> Result<Value> {
+        let mut provider = self.provider.lock().await;
+        let conn = provider.get_connections().await?;
+        info!(
+            "\tUpsert user query start: firebase_uid={}",
+            param.firebase_id
+        );
+        let row = conn
+            .query_one(
+                "INSERT INTO users (firebase_uid, display_name, email)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (firebase_uid)
+             DO UPDATE SET
+                display_name = COALESCE(EXCLUDED.display_name, users.display_name),
+                email = COALESCE(EXCLUDED.email, users.email),
+                updated_at = NOW()
+             RETURNING id, firebase_uid, display_name, email, created_at::text, updated_at::text",
+                &[&param.firebase_id, &param.display_name, &param.email],
+            )
+            .await?;
+        info!("\tUpsert user query completed");
+        Ok(common::user(row))
+    }
+
     pub async fn get_user_by_id(&self, param: GetUserByIdParam) -> Result<Value> {
         let mut provider = self.provider.lock().await;
         let conn = provider.get_connections().await?;
@@ -65,5 +89,16 @@ mod test {
         let provider = Arc::new(Mutex::new(SchemaProvider::default()));
         let tool = UserTool::new(provider.clone());
         assert!(Arc::ptr_eq(&provider, &tool.provider));
+    }
+
+    #[test]
+    fn upsert_user_param_accepts_firebase_uid_without_uuid_parsing() {
+        let param = UpsertUserParam {
+            firebase_id: "lPSFlYu0VmaYhpy42JqekNC7pNa2".to_string(),
+            display_name: None,
+            email: None,
+        };
+
+        assert_eq!(param.firebase_id, "lPSFlYu0VmaYhpy42JqekNC7pNa2");
     }
 }

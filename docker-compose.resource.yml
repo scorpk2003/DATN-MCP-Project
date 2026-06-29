@@ -8,9 +8,9 @@ services:
       POSTGRES_USER: ${RESOURCE_USER:-postgres}
       POSTGRES_PASSWORD: ${RESOURCE_PASS:-1234}
     ports:
-      - "${RESOURCE_SERVICE_PORT:-5433}:5432"
+      - "${RESOURCE_POSTGRES_HOST_PORT:-5435}:5432"
     volumes:
-      - resource-postgres-data:/var/lib/postgresql/data
+      - resource-postgres-data:/var/lib/postgresql
       - ./resource_service_postgres.sql:/docker-entrypoint-initdb.d/001-resource-service.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
@@ -36,7 +36,7 @@ services:
       RESOURCE_SERVICE_URL: http://resource-api:${RESOURCE_SERVICE_API_PORT:-3200}
     command: ["/usr/local/bin/resource_service"]
     ports:
-      - "${RESOURCE_SERVICE_API_PORT:-3200}:${RESOURCE_SERVICE_API_PORT:-3200}"
+      - "${RESOURCE_SERVICE_API_HOST_PORT:-3200}:${RESOURCE_SERVICE_API_PORT:-3200}"
     depends_on:
       resource-postgres:
         condition: service_healthy

@@ -1,6 +1,6 @@
 # Lesson MCP Server
 
-Evidence-based Lesson MCP server for the self-learn system.
+Lesson MCP Server tao, validate, finalize va danh gia bai hoc dua tren resource evidence. Server nay nam trong flow do Orchestrator quan ly: Orchestrator lay roadmap node, goi Resource MCP de lay evidence, dua evidence vao Lesson MCP, sau do tu thuc thi Database MCP call plan neu can luu.
 
 Endpoint:
 
@@ -17,7 +17,18 @@ RESOURCE_MCP_URL=http://127.0.0.1:3300/mcp
 DATABASE_MCP_URL=http://127.0.0.1:3000/mcp
 ```
 
-Implemented v0.1 tools:
+## Muc dich
+
+```txt
+Analyze roadmap node thanh lesson requirement.
+Pack resource evidence va chi tao lesson khi evidence du chat luong.
+Sinh lesson draft gom content blocks, exercise, quiz, rubric va source references.
+Validate lesson theo objective/resource/exercise/quiz/content policy.
+Finalize lesson thanh payload/call plan san sang cho Database MCP.
+Grade answer, tao remediation va tinh progress payload sau khi hoan thanh session.
+```
+
+## Tools
 
 ```txt
 get_lesson_contract
@@ -33,7 +44,36 @@ lesson_generate_remediation
 lesson_complete_session
 ```
 
-Guardrails:
+## Y nghia cua nhom tool
+
+```txt
+Contract/readiness
+  get_lesson_contract, get_lesson_integration_contract, lesson_health, lesson_readiness.
+
+Lesson creation
+  lesson_analyze_node, lesson_create_draft, lesson_validate_draft, lesson_finalize.
+
+Learner evaluation
+  lesson_grade_answer, lesson_generate_remediation, lesson_complete_session.
+```
+
+## Services noi bo
+
+```txt
+node_analyzer     Chuan hoa objective, prerequisite gap, resource query va exercise type.
+resource_packer   Loc, dedupe, chon chunks va tinh coverage tu resource candidates.
+lesson_generator  Tao lesson draft co cau truc tu packed evidence.
+lesson_validator  Kiem tra chat luong lesson truoc khi persist.
+finalizer         Doi lesson draft thanh Database MCP call descriptors.
+grading           Cham cau tra loi theo rubric.
+remediation       Tao goi on tap/sua loi dua tren grading result va resource refs.
+progress_policy   Tinh mastery, completion status va progress payload.
+request_guard     Chan input thieu/sai/qua lon.
+access_policy     Yeu cau authContext verified va scope dung.
+observability     Dem tool call, success, error va exposed qua health/readiness.
+```
+
+## Guardrails
 
 ```txt
 No direct database writes.
@@ -43,7 +83,7 @@ User-scoped tool calls require verified authContext.
 No free-form tool outputs; responses use structured JSON envelopes.
 ```
 
-Observability:
+## Observability
 
 ```txt
 lesson_health and lesson_readiness expose in-process counters:

@@ -1,5 +1,6 @@
 pub mod analytics;
 pub mod common;
+pub mod lessons;
 pub mod milestones;
 pub mod phases;
 pub mod progress;
@@ -11,6 +12,7 @@ pub mod tasks;
 pub mod users;
 
 pub use analytics::AnalyticsTool;
+pub use lessons::LessonTool;
 pub use milestones::MilestoneTool;
 pub use phases::PhaseTool;
 pub use progress::ProgressTool;

@@ -180,6 +180,7 @@ mod tests {
     fn normalizes_backend_node_postgres_goal() {
         let request = RoadmapGenerationRequest {
             user_id: None,
+            project_id: None,
             learning_goal: " I want to learn backend with Node.js and PostgreSQL ".to_string(),
             current_level: Some(CurrentLevel::Beginner),
             target_role: None,

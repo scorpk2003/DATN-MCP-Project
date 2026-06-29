@@ -11,6 +11,8 @@ const testConfig: GatewayConfig = {
   orchestratorBaseUrl: "http://127.0.0.1:9",
   orchestratorTimeoutMs: 200,
   corsOrigin: "*",
+  resourceServiceBaseUrl: "http://127.0.0.1:9",
+  allowDevAuthContext: true,
 };
 
 async function withServer<T>(callback: (baseUrl: string) => Promise<T>) {

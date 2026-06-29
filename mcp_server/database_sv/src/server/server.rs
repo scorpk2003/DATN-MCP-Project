@@ -25,8 +25,8 @@ use crate::{
     schemas::*,
     server::ServerConfig,
     tools::{
-        AnalyticsTool, MilestoneTool, PhaseTool, ProgressTool, ProjectTool, ResourceTool,
-        RoadmapTool, SearchTool, TaskTool, UserTool,
+        AnalyticsTool, LessonTool, MilestoneTool, PhaseTool, ProgressTool, ProjectTool,
+        ResourceTool, RoadmapTool, SearchTool, TaskTool, UserTool,
     },
 };
 
@@ -44,6 +44,7 @@ pub struct DbServer {
     pub resource_tool: ResourceTool,
     pub search_tool: SearchTool,
     pub analytics_tool: AnalyticsTool,
+    pub lesson_tool: LessonTool,
     pub tool_router: ToolRouter<Self>,
 }
 
@@ -65,6 +66,7 @@ impl DbServer {
             resource_tool: ResourceTool::new(provider.clone()),
             search_tool: SearchTool::new(provider.clone()),
             analytics_tool: AnalyticsTool::new(provider.clone()),
+            lesson_tool: LessonTool::new(provider.clone()),
             provider,
             tool_router: Self::tool_router(),
         }
@@ -74,8 +76,9 @@ impl DbServer {
         let addr = format!("{}:{}", self.config.host.clone(), self.config.port.clone());
         info!("\tStarting Database Server at: {addr}");
 
-        let config =
-            StreamableHttpServerConfig::default().with_cancellation_token(CancellationToken::new());
+        let config = StreamableHttpServerConfig::default()
+            .with_allowed_hosts(allowed_mcp_hosts())
+            .with_cancellation_token(CancellationToken::new());
         let service = StreamableHttpService::new(
             move || Ok(self.clone()),
             Arc::new(LocalSessionManager::default()),
@@ -117,6 +120,26 @@ impl DbServer {
                 error!("\tCreate user failed: {e}");
                 Ok(CallToolResult::error(vec![Content::text(format!(
                     "Create user failed: {e}"
+                ))]))
+            }
+        }
+    }
+
+    #[tool(description = "Create or update a user by Firebase uid")]
+    pub async fn upsert_user(
+        &self,
+        Parameters(param): Parameters<UpsertUserParam>,
+    ) -> Result<CallToolResult, ErrorData> {
+        info!("\tCALL TOOL: [UPSERT USER]");
+        match self.user_tool.upsert_user(param).await {
+            Ok(value) => {
+                info!("\tTOOL: [UPSERT USER] CALL COMPLETED");
+                Ok(Self::json_success(value))
+            }
+            Err(e) => {
+                error!("\tUpsert user failed: {e}");
+                Ok(CallToolResult::error(vec![Content::text(format!(
+                    "Upsert user failed: {e}"
                 ))]))
             }
         }
@@ -683,6 +706,91 @@ impl DbServer {
         }
     }
 
+    #[tool(description = "Create or upsert a persisted lesson from Lesson MCP finalizer output")]
+    pub async fn create_lesson(
+        &self,
+        Parameters(param): Parameters<CreateLessonParam>,
+    ) -> Result<CallToolResult, ErrorData> {
+        info!("\tCALL TOOL: [CREATE LESSON]");
+        match self.lesson_tool.create_lesson(param).await {
+            Ok(value) => Ok(Self::json_success(value)),
+            Err(e) => {
+                error!("\tCreate lesson failed: {e}");
+                Ok(CallToolResult::error(vec![Content::text(format!(
+                    "Create lesson failed: {e}"
+                ))]))
+            }
+        }
+    }
+
+    #[tool(description = "Create a lesson content block")]
+    pub async fn create_lesson_block(
+        &self,
+        Parameters(param): Parameters<CreateLessonBlockParam>,
+    ) -> Result<CallToolResult, ErrorData> {
+        info!("\tCALL TOOL: [CREATE LESSON BLOCK]");
+        match self.lesson_tool.create_lesson_block(param).await {
+            Ok(value) => Ok(Self::json_success(value)),
+            Err(e) => {
+                error!("\tCreate lesson block failed: {e}");
+                Ok(CallToolResult::error(vec![Content::text(format!(
+                    "Create lesson block failed: {e}"
+                ))]))
+            }
+        }
+    }
+
+    #[tool(description = "Link a resource reference to a lesson")]
+    pub async fn link_lesson_resource(
+        &self,
+        Parameters(param): Parameters<LinkLessonResourceParam>,
+    ) -> Result<CallToolResult, ErrorData> {
+        info!("\tCALL TOOL: [LINK LESSON RESOURCE]");
+        match self.lesson_tool.link_lesson_resource(param).await {
+            Ok(value) => Ok(Self::json_success(value)),
+            Err(e) => {
+                error!("\tLink lesson resource failed: {e}");
+                Ok(CallToolResult::error(vec![Content::text(format!(
+                    "Link lesson resource failed: {e}"
+                ))]))
+            }
+        }
+    }
+
+    #[tool(description = "Create a lesson exercise")]
+    pub async fn create_lesson_exercise(
+        &self,
+        Parameters(param): Parameters<CreateLessonExerciseParam>,
+    ) -> Result<CallToolResult, ErrorData> {
+        info!("\tCALL TOOL: [CREATE LESSON EXERCISE]");
+        match self.lesson_tool.create_lesson_exercise(param).await {
+            Ok(value) => Ok(Self::json_success(value)),
+            Err(e) => {
+                error!("\tCreate lesson exercise failed: {e}");
+                Ok(CallToolResult::error(vec![Content::text(format!(
+                    "Create lesson exercise failed: {e}"
+                ))]))
+            }
+        }
+    }
+
+    #[tool(description = "Create a lesson quiz")]
+    pub async fn create_lesson_quiz(
+        &self,
+        Parameters(param): Parameters<CreateLessonQuizParam>,
+    ) -> Result<CallToolResult, ErrorData> {
+        info!("\tCALL TOOL: [CREATE LESSON QUIZ]");
+        match self.lesson_tool.create_lesson_quiz(param).await {
+            Ok(value) => Ok(Self::json_success(value)),
+            Err(e) => {
+                error!("\tCreate lesson quiz failed: {e}");
+                Ok(CallToolResult::error(vec![Content::text(format!(
+                    "Create lesson quiz failed: {e}"
+                ))]))
+            }
+        }
+    }
+
     #[tool(description = "Infomation of multi schemas in database")]
     pub async fn get_multi_schema(
         &self,
@@ -770,6 +878,18 @@ impl Drop for DbServer {
     fn drop(&mut self) {
         info!("\tShutting down Database Server!!!!");
     }
+}
+
+fn allowed_mcp_hosts() -> Vec<String> {
+    std::env::var("MCP_ALLOWED_HOSTS")
+        .unwrap_or_else(|_| {
+            "localhost,127.0.0.1,::1,database-mcp,roadmap-mcp,resource-mcp,lesson-mcp".to_string()
+        })
+        .split(',')
+        .map(str::trim)
+        .filter(|host| !host.is_empty())
+        .map(ToString::to_string)
+        .collect()
 }
 
 #[tool_handler]

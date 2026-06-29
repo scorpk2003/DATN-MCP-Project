@@ -6,6 +6,5 @@ docs
 **/node_modules
 **/dist
 **/build
-**/.env
 *.docx
 *.txt

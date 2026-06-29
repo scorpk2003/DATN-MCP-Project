@@ -4,6 +4,7 @@ use anyhow::Result;
 use serde_json::Value;
 use tokio::sync::Mutex;
 use tracing::info;
+use uuid::Uuid;
 
 use crate::tools::common;
 use crate::{
@@ -25,13 +26,14 @@ impl ProjectTool {
         let status = param.status.unwrap_or_else(|| "draft".to_string());
         let mut provider = self.provider.lock().await;
         let conn = provider.get_connections().await?;
-        info!("\tCreate project query start: user_id={}", param.user_id);
+        let owner_user_id = resolve_user_ref(&conn, &param.user_id).await?;
+        info!("\tCreate project query start: user_id={}", owner_user_id);
         let row = conn
             .query_one(
                 "INSERT INTO projects (user_id, title, description, status)
              VALUES ($1, $2, $3, $4)
              RETURNING id, user_id, title, description, status, created_at::text, updated_at::text",
-                &[&param.user_id, &param.title, &param.description, &status],
+                &[&owner_user_id, &param.title, &param.description, &status],
             )
             .await?;
         info!("\tCreate project query completed");
@@ -85,17 +87,34 @@ impl ProjectTool {
     pub async fn list_projects(&self, param: ListProjectsParam) -> Result<Value> {
         let mut provider = self.provider.lock().await;
         let conn = provider.get_connections().await?;
+        let owner_user_id = resolve_user_ref(&conn, &param.user_id).await?;
         let rows = conn
             .query(
                 "SELECT id, user_id, title, description, status, created_at::text, updated_at::text
              FROM projects WHERE user_id = $1 ORDER BY updated_at DESC",
-                &[&param.user_id],
+                &[&owner_user_id],
             )
             .await?;
         Ok(Value::Array(
             rows.into_iter().map(common::project).collect(),
         ))
     }
+}
+
+async fn resolve_user_ref(conn: &tokio_postgres::Client, value: &str) -> Result<Uuid> {
+    if let Ok(uuid) = Uuid::parse_str(value) {
+        return Ok(uuid);
+    }
+
+    let row = conn
+        .query_opt("SELECT id FROM users WHERE firebase_uid = $1", &[&value])
+        .await?;
+    row.map(|row| row.get("id")).ok_or_else(|| {
+        anyhow::anyhow!(
+            "USER_NOT_FOUND: no users row exists for firebase_uid '{}'; create or sync the user before creating a project",
+            value
+        )
+    })
 }
 
 #[cfg(test)]
@@ -105,7 +124,7 @@ mod test {
     #[test]
     fn create_project_default_status_is_bound_in_logic() {
         let param = CreateProjectParam {
-            user_id: uuid::Uuid::new_v4(),
+            user_id: uuid::Uuid::new_v4().to_string(),
             title: "Roadmap".to_string(),
             description: None,
             status: None,

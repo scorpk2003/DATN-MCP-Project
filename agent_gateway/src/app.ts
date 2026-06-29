@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import type { GatewayConfig } from "./config.js";
 import { actionsRouter } from "./routes/actions.routes.js";
+import { dataRouter } from "./routes/data.routes.js";
 import { intentsRouter } from "./routes/intents.routes.js";
 import { runsRouter } from "./routes/runs.routes.js";
 import { sessionsRouter } from "./routes/sessions.routes.js";
@@ -25,10 +26,11 @@ export function createApp(config: GatewayConfig) {
     response.json({ status: "ok" });
   });
 
+  app.use(dataRouter(config));
   app.use(sessionsRouter());
-  app.use(intentsRouter(runProcessor));
+  app.use(intentsRouter(runProcessor, config));
   app.use(streamRouter());
-  app.use(actionsRouter(runProcessor));
+  app.use(actionsRouter(runProcessor, config));
   app.use(runsRouter(runProcessor));
   app.use(errorHandler);
 

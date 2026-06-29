@@ -11,7 +11,23 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use tracing::info;
 
-use crate::{AGENT_TESTING, AgentContext, PlanStep, PromptBuilder, StepActions};
+use crate::{
+    AgentContext, PlanStep, PromptBuilder, StepActions, agent_testing_enabled, executor_model,
+    parse_llm_json_value,
+};
+
+#[derive(Debug, Deserialize)]
+struct BindingResponse {
+    binding: BindingPayload,
+}
+
+#[derive(Debug, Deserialize)]
+struct BindingPayload {
+    step_id: String,
+    input: InputResolver,
+    output: OutputTarget,
+    expected_schema: Option<Value>,
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct StepBinding {
@@ -55,10 +71,13 @@ impl StepBinding {
         execution: &Client<OpenAIConfig>,
         context: &AgentContext,
         prompt: &PromptBuilder,
+        selected_tool_schema: Option<&Value>,
     ) -> Result<Self> {
         // Build system prompt for binding phase
         let mut prompt_build = prompt.clone();
-        prompt_build.build_binding_phase(AGENT_TESTING).await;
+        prompt_build
+            .build_binding_phase(agent_testing_enabled())
+            .await;
         let system_prompt = prompt_build.build_system_prompt();
 
         // Get Dependencies and last observation
@@ -87,39 +106,46 @@ impl StepBinding {
             .collect::<Vec<String>>()
             .join("\n\n");
 
-        let obs = format!("Last Observation: {last_obs}\n\n{dept_val}");
+        let tool_schema = selected_tool_schema
+            .map(|schema| {
+                serde_json::to_string_pretty(schema)
+                    .unwrap_or_else(|_| "Failed to serialize selected tool schema".to_string())
+            })
+            .unwrap_or_else(|| "No selected tool schema for this step.".to_string());
+        let context_snapshot = serde_json::to_string(context)
+            .unwrap_or_else(|_| "Failed to serialize agent context".to_string());
+        let obs = format!(
+            "Selected Tool Input Schema:\n{tool_schema}\n\nAgent Context JSON:\n{context_snapshot}\n\nLast Observation: {last_obs}\n\nDependency Observations:\n{dept_val}"
+        );
 
         let mut binding_prompt = match &step.action {
             StepActions::ToolCall { server, tool } => {
                 let step_goal = step
                     .step_goal
                     .clone()
-                    .and_then(|f| Some(format!("step goal: {f}")))
-                    .unwrap();
+                    .map(|f| format!("step goal: {f}"))
+                    .unwrap_or_else(|| "step goal: use the selected tool safely".to_string());
                 format!(
                     "Use tool: {tool} in server: {server} for this step: {:?}\n{step_goal}",
                     step.id.clone()
                 )
             }
-            StepActions::Reasoning => {
-                format!("Response to user")
-            }
-            StepActions::HumanApproval => {
-                format!("Need User approval")
-            }
+            StepActions::Reasoning => "Response to user".to_string(),
+            StepActions::HumanApproval => "Need User approval".to_string(),
         };
+        binding_prompt.push_str("\n\n");
         binding_prompt.push_str(obs.as_str());
 
         let prompt = ChatCompletionRequestUserMessageArgs::default()
             .content(binding_prompt)
             .build()
-            .unwrap();
+            .map_err(|e| anyhow!("Failed to build binding prompt: {e}"))?;
         let request = CreateChatCompletionRequest {
             messages: vec![
                 ChatCompletionRequestMessage::System(system_prompt),
                 ChatCompletionRequestMessage::User(prompt),
             ],
-            model: "openai/gpt-oss-20b:free".to_string(),
+            model: executor_model(),
             response_format: Some(JsonObject),
             ..Default::default()
         };
@@ -141,31 +167,22 @@ impl StepBinding {
             .first()
             .and_then(|c| c.message.content.as_deref())
             .ok_or_else(|| anyhow!("No content in binding response"))?;
-        let content = serde_json::from_str::<Value>(content).expect("Convert to value fail!!!");
+        let binding = Self::parse_binding_response(content)?;
 
-        let input = content
-            .get("input")
-            .expect("Input no exist in binding response");
-        let output = content
-            .get("output")
-            .expect("Output no exist in binding response");
-        let expected_schema = content
-            .get("expected_schema")
-            .expect("Expected schema no exist in binding response");
-
-        let input = serde_json::from_value::<InputResolver>(input.clone())
-            .expect("Failed to parse input resolver");
-        let output = serde_json::from_value::<OutputTarget>(output.clone())
-            .expect("Failed to parse output target");
-        let expected_schema = Some(expected_schema.clone());
-
-        let binding = StepBinding {
-            step_id: step.id.clone(),
-            input,
-            output,
-            expected_schema,
-        };
         Ok(binding)
+    }
+
+    pub fn parse_binding_response(content: &str) -> Result<Self> {
+        let value = parse_llm_json_value(content, "BINDING_PARSE_ERROR")?;
+        let response = serde_json::from_value::<BindingResponse>(value)
+            .map_err(|e| anyhow!("BINDING_PARSE_ERROR: invalid binding contract: {e}"))?;
+
+        Ok(StepBinding {
+            step_id: response.binding.step_id,
+            input: response.binding.input,
+            output: response.binding.output,
+            expected_schema: response.binding.expected_schema,
+        })
     }
 
     pub async fn resolve_params(
@@ -183,7 +200,7 @@ impl StepBinding {
                     let (from, to) = key.extract_key();
 
                     let value = Self::resolve_path(&ctx, &from)?;
-                    Self::insert_nested(&mut params, &to, value);
+                    Self::insert_nested(&mut params, &to, value)?;
                 }
                 Ok(Value::Object(params))
             }
@@ -203,10 +220,10 @@ impl StepBinding {
                             ChatCompletionRequestUserMessageArgs::default()
                                 .content(user_prompt)
                                 .build()
-                                .unwrap(),
+                                .map_err(|e| anyhow!("Failed to build LLM resolved prompt: {e}"))?,
                         ),
                     ],
-                    model: "openai/gpt-oss-20b:free".to_string(),
+                    model: executor_model(),
                     response_format: Some(JsonObject),
                     ..Default::default()
                 };
@@ -227,12 +244,57 @@ impl StepBinding {
                     .first()
                     .and_then(|c| c.message.content.as_deref())
                     .ok_or_else(|| anyhow!("No content in LLM resolved input response"))?;
-                let value = serde_json::from_str(content)
+                let value = parse_llm_json_value(content, "LLM_RESOLVED_INPUT_PARSE_ERROR")
                     .map_err(|e| anyhow!("Failed to parse LLM resolved input response: {}", e))?;
                 Ok(value)
             }
             InputResolver::Static { value } => Ok(value.clone()),
         }
+    }
+
+    pub async fn repair_params(
+        step: &PlanStep,
+        params: &Value,
+        schema: &Value,
+        validation_error: &str,
+        context: &AgentContext,
+        executor: &Client<OpenAIConfig>,
+        prompt: &PromptBuilder,
+    ) -> Result<Value> {
+        let step_goal = step.step_goal.clone().unwrap_or_default();
+        let context_json = serde_json::to_string(context)?;
+        let params_json = serde_json::to_string(params)?;
+        let schema_json = serde_json::to_string_pretty(schema)?;
+        let user_prompt = format!(
+            "Repair tool parameters only.\n\nStep goal: {step_goal}\n\nValidation error: {validation_error}\n\nCurrent params JSON:\n{params_json}\n\nTool input schema:\n{schema_json}\n\nAgent context JSON:\n{context_json}\n\nReturn only the repaired JSON params object. Do not wrap it in binding. Do not include markdown. Do not invent trusted auth fields."
+        );
+        let request = CreateChatCompletionRequest {
+            messages: vec![
+                ChatCompletionRequestMessage::System(prompt.build_system_prompt()),
+                ChatCompletionRequestMessage::User(
+                    ChatCompletionRequestUserMessageArgs::default()
+                        .content(user_prompt)
+                        .build()
+                        .map_err(|e| anyhow!("Failed to build param repair prompt: {e}"))?,
+                ),
+            ],
+            model: executor_model(),
+            response_format: Some(JsonObject),
+            ..Default::default()
+        };
+        let response = executor.chat().create(request).await?;
+        let content = response
+            .choices
+            .first()
+            .and_then(|choice| choice.message.content.as_deref())
+            .ok_or_else(|| anyhow!("No content in param repair response"))?;
+        let value = parse_llm_json_value(content, "PARAM_REPAIR_PARSE_ERROR")?;
+        if !value.is_object() {
+            return Err(anyhow!(
+                "PARAM_REPAIR_PARSE_ERROR: repaired params must be a JSON object"
+            ));
+        }
+        Ok(value)
     }
 
     pub fn apply_output(&self, context: &mut AgentContext, value: &Value) {
@@ -259,9 +321,9 @@ impl StepBinding {
         }
         Ok(current.clone())
     }
-    fn insert_nested(obj: &mut Map<String, Value>, path: &[String], value: Value) {
+    fn insert_nested(obj: &mut Map<String, Value>, path: &[String], value: Value) -> Result<()> {
         if path.is_empty() {
-            return;
+            return Ok(());
         }
 
         let mut current = obj;
@@ -271,10 +333,14 @@ impl StepBinding {
                 .entry(key.clone())
                 .or_insert_with(|| Value::Object(Map::new()))
                 .as_object_mut()
-                .expect("Expect Object during insert");
+                .ok_or_else(|| anyhow!("Target path '{}' is not an object", key))?;
         }
 
-        current.insert(path.last().unwrap().clone(), value);
+        let Some(last) = path.last() else {
+            return Ok(());
+        };
+        current.insert(last.clone(), value);
+        Ok(())
     }
 }
 
@@ -319,5 +385,64 @@ impl ContextKey {
             .map(|s| s.to_string())
             .collect::<Vec<String>>();
         (split_val, split_key)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_wrapped_binding_response() {
+        let content = r#"{
+            "binding": {
+                "step_id": "step 1",
+                "input": {"type": "Static", "value": {"goal": "learn rust"}},
+                "output": {"type": "Scratchpad", "name": "roadmap"},
+                "expected_schema": {"ok": true}
+            }
+        }"#;
+
+        let binding = StepBinding::parse_binding_response(content).unwrap();
+        assert_eq!(binding.step_id, "step 1");
+        assert!(matches!(binding.input, InputResolver::Static { .. }));
+    }
+
+    #[test]
+    fn parses_fenced_binding_response() {
+        let content = r#"```json
+        {
+            "binding": {
+                "step_id": "step 1",
+                "input": {"type": "Static", "value": {"goal": "learn rust"}},
+                "output": {"type": "Scratchpad", "name": "roadmap"},
+                "expected_schema": {"ok": true}
+            }
+        }
+        ```"#;
+
+        let binding = StepBinding::parse_binding_response(content).unwrap();
+        assert_eq!(binding.step_id, "step 1");
+        assert!(matches!(binding.input, InputResolver::Static { .. }));
+    }
+
+    #[test]
+    fn parses_inline_fenced_binding_response() {
+        let content = r#"```json{"binding":{"step_id":"step 1","input":{"type":"Static","value":{}},"output":{"type":"Scratchpad","name":"x"},"expected_schema":null}}```"#;
+
+        let binding = StepBinding::parse_binding_response(content).unwrap();
+        assert_eq!(binding.step_id, "step 1");
+    }
+
+    #[test]
+    fn rejects_unwrapped_binding_response() {
+        let content = r#"{
+            "input": {"type": "Static", "value": {}},
+            "output": {"type": "Scratchpad", "name": "x"},
+            "expected_schema": {}
+        }"#;
+
+        let error = StepBinding::parse_binding_response(content).unwrap_err();
+        assert!(error.to_string().contains("BINDING_PARSE_ERROR"));
     }
 }

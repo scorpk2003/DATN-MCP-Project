@@ -449,7 +449,7 @@ mod tests {
             })
             .collect::<Vec<_>>();
 
-        build_roadmap_graph(None, &goal, &selection.blueprint, &bound)
+        build_roadmap_graph(None, None, &goal, &selection.blueprint, &bound)
     }
 
     fn resource_ref() -> ResourceBinding {

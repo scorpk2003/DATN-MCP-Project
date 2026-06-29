@@ -11,6 +11,7 @@ use crate::domain::{
 
 pub fn build_roadmap_graph(
     user_id: Option<String>,
+    project_id: Option<String>,
     goal: &GoalProfile,
     blueprint: &RoadmapBlueprint,
     bound_topics: &[BoundTopicPlan],
@@ -28,6 +29,7 @@ pub fn build_roadmap_graph(
     RoadmapGraph {
         roadmap_id: None,
         user_id,
+        project_id,
         status,
         metadata: json!({
             "blueprintId": blueprint.blueprint_id,
@@ -364,6 +366,7 @@ mod tests {
 
         let graph = build_roadmap_graph(
             Some("user_1".to_string()),
+            None,
             &goal,
             &selection.blueprint,
             &bound,
@@ -424,7 +427,7 @@ mod tests {
             research_requested: true,
         }];
 
-        let graph = build_roadmap_graph(None, &goal, &selection.blueprint, &bound);
+        let graph = build_roadmap_graph(None, None, &goal, &selection.blueprint, &bound);
 
         assert!(matches!(graph.status, RoadmapStatus::NeedsResourceBackfill));
         assert_eq!(graph.coverage_summary.coverage_poor, 1);

@@ -298,6 +298,7 @@ fn phase_14_niche_candidate_topic_cases_pass_adaptive_planning_gate() {
         let bound = topic_plan.iter().map(good_bound_topic).collect::<Vec<_>>();
         let graph = graph_builder::build_roadmap_graph(
             Some("user_eval".to_string()),
+            None,
             &profile,
             &blueprint,
             &bound,
@@ -384,6 +385,7 @@ fn phase_13_poor_coverage_produces_non_misleading_roadmap() {
         .collect::<Vec<_>>();
     let graph = graph_builder::build_roadmap_graph(
         Some("user_eval".to_string()),
+        None,
         &profile,
         &selection.blueprint,
         &bound_topics,
@@ -441,6 +443,7 @@ fn phase_13_contract_and_persistence_boundary_are_explicit() {
 fn phase_13_failure_modes_are_caught_by_validation() {
     let invalid = request_validator::validate_roadmap_request(RoadmapGenerationRequest {
         user_id: Some("user_eval".to_string()),
+        project_id: None,
         learning_goal: "Learn backend".to_string(),
         current_level: Some(CurrentLevel::Beginner),
         target_role: Some(TargetRole::Backend),
@@ -516,6 +519,7 @@ fn evaluated_graph(
 ) -> RoadmapGraph {
     let validation = request_validator::validate_roadmap_request(RoadmapGenerationRequest {
         user_id: Some("user_eval".to_string()),
+        project_id: None,
         learning_goal: learning_goal.to_string(),
         current_level: Some(current_level),
         target_role,
@@ -541,6 +545,7 @@ fn evaluated_graph(
 
     graph_builder::build_roadmap_graph(
         Some("user_eval".to_string()),
+        None,
         &profile,
         &selection.blueprint,
         &bound_topics,
@@ -550,6 +555,7 @@ fn evaluated_graph(
 fn goal_profile(goal: &str) -> GoalProfile {
     let validation = request_validator::validate_roadmap_request(RoadmapGenerationRequest {
         user_id: Some("user_eval".to_string()),
+        project_id: None,
         learning_goal: goal.to_string(),
         current_level: Some(CurrentLevel::Beginner),
         target_role: None,

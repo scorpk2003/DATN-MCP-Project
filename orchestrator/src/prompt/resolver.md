@@ -1,190 +1,214 @@
 # Binding Strategy
 
-## Phase Goal
-- You will build input resolver - output target for step before executing. Your goal is to generate executable runtime bindings between available context and step execution. If context path or parameters are ambiguous, prefer partial bindings and defer exact resolution to execution observations.
+## Purpose
 
-## Input Resolver Format
-- Step-Input: Enum that keep context during flow.
-```json
-// Context: Build params from main context
-{"type": "Context", "keys": [{
-    "from": "context_path",
-    "to": "param_name"
-}]}
+Create one executable binding for the current `PlanStep`.
 
-// LlmResolved: Reasoning and Generate params - Params complicated
-{"type": "LlmResolved", "instruction": "instruction_to_build_prompt", "context_keys": ["context_keys"]}
+Binding maps existing `AgentContext` data into tool parameters or reasoning inputs. Binding also declares where the step output should be written after execution.
 
-// Static: Hard-code params - easy step
-{"type": "Static", "value":}
-```
+Do not change the plan. Do not call tools. Do not invent tool outputs.
 
-## OutputTarget Format
-- Step-Output: Enum that expect when finish step. Responsibility for WHERE data goes.
-```json
-// Write to field of Agent Context: goal, lesson, quizz, practice, ...
-{"type": "Field", "name": "field_name"}
+For `ToolCall` steps, the runtime provides the selected tool input schema in the user message. The produced params must validate against that schema.
 
-// Write to scratchdpad (debug or intermediate)
-{"type": "Scratchpad", "name": "scratchpad_name"}
+## Required Output
 
-// Both
-{"type": "FieldAndScratchpad", "field": "field_name", "scratchpad": "scratchpad_name"}
-```
+Return only raw JSON with this exact top-level shape:
 
-## Strategy Flow
-1. Context: Knowing context of flow or at least knowing previous step - current step - next step.
-2. Dependencies: Knowing all dependencies ready for build input resolver.
-3. Input Resolver: Build input resolver for step, if ambigous about previous step or can't specified exact context path, params, etc... so watch Observation to building.
-4. Output Target: Based on action, build expected output after execute step.
-5. Schema Expect: Expected relative schema using evaluate after execution.
-
-## Ouput Format
-- Return raw Json following this format:
 ```json
 {
-    "binding": {
-        "step_id": "id_or_name_of_current_step",
-        "input": "input_resolver",
-        "output": "output_target",
-        "expected_schema": "schema_expect_after_execution", // What executor expects
-    }
+  "binding": {
+    "step_id": "step id",
+    "input": {"type": "Static", "value": {}},
+    "output": {"type": "Scratchpad", "name": "scratchpad_key"},
+    "expected_schema": null
+  }
 }
 ```
 
-## Example
-- Prompt:
+The response must deserialize into `StepBinding`.
+
+## Valid Input Resolver Shapes
+
+Prefer `Context` whenever params can be copied from existing context:
+
+```json
+{
+  "type": "Context",
+  "keys": [
+    {"from": "goal", "to": "goal"}
+  ]
+}
 ```
-Use tool: extract_topic from server: Roadmap Server for step: step 03. Dependencies: step 02 {
-    "call_tool": "extract_topic",
+
+Use `Static` when params are literal values or can be directly assembled from information already present in the prompt:
+
+```json
+{
+  "type": "Static",
+  "value": {
+    "approved": true
+  }
+}
+```
+
+`LlmResolved` is a last resort. Avoid it unless no `Context` or `Static` binding can express the required input. Do not use `LlmResolved` for simple fields such as `goal`, `topic`, `user_id`, `session_id`, `roadmap`, `lesson`, or `auth_context`.
+
+If `LlmResolved` is unavoidable, keep it narrow:
+
+```json
+{
+  "type": "LlmResolved",
+  "instruction": "Fill only the missing tool parameters from the listed context keys.",
+  "context_keys": ["goal", "scratchpad.last_obs"]
+}
+```
+
+## Valid Output Target Shapes
+
+Use exactly one of these:
+
+```json
+{"type": "Field", "name": "roadmap"}
+```
+
+```json
+{"type": "Scratchpad", "name": "step_result"}
+```
+
+```json
+{"type": "FieldAndScratchpad", "field": "roadmap", "scratchpad": "roadmap_result"}
+```
+
+Do not add any extra field beyond the selected output target shape.
+
+## Valid Context Roots
+
+You may read only these root paths:
+
+- `session_id`
+- `user_id`
+- `auth_context`
+- `goal`
+- `topic`
+- `roadmap`
+- `skill_graph`
+- `lesson`
+- `quizz`
+- `user`
+- `user_confirmed`
+- `scratchpad.last_obs`
+- `scratchpad.debug:step_<id>`
+
+For dependency observations, use the exact scratchpad key created by the runtime:
+
+```txt
+scratchpad.debug:step_step 1
+scratchpad.debug:step_step 2
+```
+
+Do not use any root path outside the list above; unknown roots do not exist in `AgentContext`.
+
+## Binding Rules
+
+- Match `binding.step_id` to the current plan step id.
+- For `ToolCall`, build only params accepted by the selected tool input schema.
+- Do not wrap params under names such as `params`, `input`, or `arguments` unless the selected tool schema explicitly requires that wrapper.
+- Required schema fields must be present in the final params object.
+- Unknown fields should be omitted unless the schema allows them.
+- Prefer copying existing values with `Context`.
+- Use `Static` for literal params and simple objects that are already known.
+- Use `LlmResolved` only for genuinely ambiguous transformations that cannot be represented with `Context` or `Static`.
+- Never create trusted auth data. If a tool requires auth, the Rust runtime injects trusted auth after binding.
+- Keep `expected_schema` as `null` unless a small useful expectation is obvious.
+- If there is no meaningful input for a `Reasoning` or `HumanApproval` step, use `Static` with an empty object or minimal literal object.
+
+## Output Target Guidance
+
+- Write stable user-facing artifacts to fields: `goal`, `topic`, `roadmap`, `skill_graph`, `lesson`, `quizz`, `user`, or `user_confirmed`.
+- Write intermediate outputs to `Scratchpad`.
+- Use `FieldAndScratchpad` when later steps need both a typed context field and a debug/intermediate observation.
+
+## Valid Examples
+
+Tool call using the learner goal:
+
+```json
+{
+  "binding": {
+    "step_id": "step 1",
+    "input": {
+      "type": "Context",
+      "keys": [
+        {"from": "goal", "to": "goal"}
+      ]
+    },
     "output": {
-        "topic": [{"name": "topic_name", "chapter 1": "chapter_01_name", ...}]
-    }
-}.
-```
--> Return:
-```json
-{
-    "binding": {
-        "step_id": "step 03",
-        "input": {
-            "type": "Context",
-            "keys": [{
-                "from": "steps.extract_topic.output.topic",
-                "to": "goal"
-            }]
-        },
-        "output": {
-            "type": "Field",
-            "name": "roadmap",
-            "mode": "insert", // insert | overwrite | merge
-        },
-        "expected_schema": {
-            "topics": ["array"]
-        }
-    }
-}
-```
-- Prompt:
-```
-Search all topics with infomation below. Sort ASC following ranking as couting number user finish 1 topic:
-{
-    "call_tool": {
-        "name: "get_all_topic",
-        "output":  {       
-            "topic": [
-                {
-                    "id": "topic_id_01",
-                    "name": "name_topic_01",
-                    "course": ["course_topic_01"],
-                    "chapter": "chapter_topic_01",
-                    "price": "price_topic_01"
-                },
-                {...},
-                {...}
-            ]
-        },
+      "type": "FieldAndScratchpad",
+      "field": "roadmap",
+      "scratchpad": "roadmap_generation"
     },
-    "dependencies": [
-        {
-            "step_id": "id_of_step",
-            "type": "action_of_step", // Call Tool | LlmResolved | Static
-            "server": "server_name",
-            "tool_name": "name_of_tool",
-            "output": [
-                {
-                    "id": "user_id",
-                    "name": "user_name",
-                    "course": {
-                        "course_id": "id_course",
-                        "course_name": "course_name",
-                        "state": "learn_state", // ready | learning | completed
-                    }
-                },
-                {...},
-                {...}
-            ]
-        },
-        {...},
-        {...},
-    ]
-}
-```
--> Return:
-```json
-{
-    "binding": {
-        "step_id": "step_02",
-        "input": {
-            "type": "LlmResolved",
-            "target": ["query", "sort", "asc"],
-            "instruction": "Generate optimize query before search",
-            "context_keys": [
-                "call_tool.output.topic",
-                "dependencies.output",
-            ],
-        },
-        "output": {
-            "type": "FieldAndSratchpad",
-            "Field": "topic",
-            "Scratchpad": "ranking_topic",
-            "mode": "insert",
-        },
-        "expected_schema": {
-            "topics": ["topic"],
-        }
-    },
-}
-```
-- Prompt:
-```
-Return roadmap to user
-```
--> Return:
-```json
-{
-    "binding" : {
-        "input": {
-            "type": "Static",
-            "value": {
-                "approval_required": true,
-            }
-        },
-        "output": {
-            "type": "Scratchpad",
-            "name": "approve_roadmap",
-            "mode": "overwrite",
-        },
-        "expected_schema": {
-            "approval_required": true,
-        }
-    }
+    "expected_schema": null
+  }
 }
 ```
 
-## Critical Rules
-- Never hallucinate context paths.
-- Only use available dependencies and context.
-- Prefer Context over LlmResolved when possible.
-- Binding must be executable at runtime.
-- Avoid unnecessary LlmResolved.
+Human approval gate:
+
+```json
+{
+  "binding": {
+    "step_id": "step 2",
+    "input": {
+      "type": "Static",
+      "value": {}
+    },
+    "output": {
+      "type": "Scratchpad",
+      "name": "approval_gate"
+    },
+    "expected_schema": null
+  }
+}
+```
+
+Reasoning based on previous observations:
+
+```json
+{
+  "binding": {
+    "step_id": "step 3",
+    "input": {
+      "type": "Context",
+      "keys": [
+        {"from": "scratchpad.last_obs", "to": "last_observation"},
+        {"from": "roadmap", "to": "roadmap"}
+      ]
+    },
+    "output": {
+      "type": "Scratchpad",
+      "name": "final_reasoning"
+    },
+    "expected_schema": null
+  }
+}
+```
+
+Last-resort LLM filling:
+
+```json
+{
+  "binding": {
+    "step_id": "step 4",
+    "input": {
+      "type": "LlmResolved",
+      "instruction": "Create only the missing search fields from the learner goal and the latest observation.",
+      "context_keys": ["goal", "scratchpad.last_obs"]
+    },
+    "output": {
+      "type": "Scratchpad",
+      "name": "resource_search"
+    },
+    "expected_schema": null
+  }
+}
+```

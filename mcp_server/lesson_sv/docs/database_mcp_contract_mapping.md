@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Status:** `missing_database_tools`
+**Status:** `verified`
 
-Lesson MCP v0.2 finalizer produces a lesson-specific persistence plan, but the current `database_sv` server does not expose lesson-specific tools yet.
+Lesson MCP v0.2 finalizer produces a lesson-specific persistence plan, and the current `database_sv` server exposes the minimum lesson-specific tools.
 
 Current Database MCP tools observed:
 
@@ -60,7 +60,7 @@ create_lesson_exercise
 create_lesson_quiz
 ```
 
-These tools are not present in `database_sv` yet. Until they exist, Orchestrator must not execute the lesson finalizer call plan as a verified Database MCP workflow.
+These tools are present in `database_sv`, so Orchestrator can execute the lesson finalizer call plan as a verified Database MCP workflow.
 
 ## Required Call Plan Shape
 
@@ -69,12 +69,12 @@ Lesson MCP finalizer returns:
 ```json
 {
   "schemaVersion": "lesson_draft_v1",
-  "notPersisted": true,
+  "notPersisted": false,
   "idempotencyKey": "lesson:topic:level:block_count:status",
   "orchestratorPersistencePlan": {
     "databaseMcpCalls": [],
     "databaseCallPlan": {
-      "contractStatus": "missing_database_tools",
+      "contractStatus": "verified",
       "transactionRequired": true,
       "idempotencyKey": "string",
       "steps": [],
@@ -176,7 +176,7 @@ Depends on `create_lesson`.
 
 ## Required Database MCP Work
 
-Before this contract can become `verified`, Database MCP should add lesson entities/tools or provide an official alternative mapping.
+Database MCP now provides minimum lesson entities/tools for MVP persistence. A later production migration can replace the compact payload tables with richer normalized lesson entities.
 
 Minimum required entities:
 
@@ -197,4 +197,3 @@ transaction_required: true
 rollback_policy: rollback_all
 idempotency_key: required for create_lesson
 ```
-

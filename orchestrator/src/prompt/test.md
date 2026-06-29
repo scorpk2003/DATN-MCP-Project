@@ -1,69 +1,63 @@
-# Testing Strategy
+# Testing Overlay
 
-## Model Context Protocol Server Mocking
-- Roadmap Server: This server responsibility for all tool relate with roadmap.
-- Lesson Server: This server responsibility for all tool relate with lesson.
-- Quiz Server: This server responsibility for all tool need to generate quiz for lesson.
-- Practice Server: This server responsibility for all tool need to generate practice for lesson.
-- Database Server: This server responsibility for all tool to store anything to Database.
-- External Server: Other server don't relate with our ecosystem, those server is helping user can visuallize lesson(Figma MCP), find many practice relate with skill(Github MCP).
+This file is appended only when `AGENT_TESTING=true`.
 
-## Tools Mocking
-#### Roadmap Server
-- extract_topic: Extract that topic receive -> return list key concept.
-- generate_individual_roadmap: Generate one roadmap for every topic -> return roadmap schema. roadmap -> HashMap<Chapter - Vec<modules>>.
-    * Example: 
-        + Topic: Rust Basic -> roadmap of Rust Fundamental.
-        + Topic: Rust Backend -> Rust Fundamental - Backend Fundamental - Rust Backend.
-- generate_dual_roadmap: Generate many roadmap for many topic. topics -> Vec<HashMap<topic - HashMap<Chapter - Vec<modules>>>>
-    * Example:
-        + Topic: Rust Basic -> roadmap of Rust Fundamental.
-        + Topic: Rust Backend -> ["Rust Fundamental", "Backend Fundamental"].
-- roadmap_exist: Find Roadmap if exist -> return Result.
-Params - Return:
-- extract_topic: (goal: String) -> rmcp::CallToolResult<Vec<String>>.
-- generate_individual_roadmap: (roadmap: Vec<String>) -> rmcp::CallToolResult<HashMap<String, Vec<String>>>.
-- generate_dual_roadmap: (topics: Vec<String>) -> rmcp::CallToolResult<HashMap<String, HashMap<String, Vec<String>>>>.
-- roadmap_exist: (topic: String) -> rmcp::CallToolResult<String>.
+The production planning and binding contracts still apply. Do not override the schemas, phase separation rules, or JSON output requirements from `plan.md` and `resolver.md`.
 
-#### Lesson Server
-- core_lesson_generate: Knowledge need for Chapter.
-    * Example: Rust Fundamental -> ["Chapter 1", "Chapter 2"] (roadmap)
-            core_lesson_tool:
-                - Chapter 1: Knowledge.
-                - Chapter 2: Knowledge.
-            -> Vec<HashMap<String, String>>
-- module_lesson_generate: Generate details knowledge of parent knowledge.
-    * Example:
-        + Chapter 1: Knowledge -> Module 1.1, Module 1.2, Module 1.3, ...
-        + Module 3.1: Knowledge of Module 3.1 -> Module 3.1.1, Module 3.1.2, Module 3.1.3, ...
-Params - Return:
-- core_lesson_generate: (roadmap: Vec<String>) -> rmcp::CallToolResult<Vec<HashMap<String, String>>>.
-- module_lesson_generate: (module: String) -> rmcp::CallToolResult<Vec<HashMap<String, Vec<String>>>>.
+## Testing Scope
 
-#### Quiz Server
-- chapter_quiz_tool: Quiz to test knowledge of user.
+Use testing behavior only when the user prompt explicitly starts with:
 
-Params - Return:
-- chapter_quiz_tool: (chapter: String) -> rmcp::CallToolResult<Vec<HashMap<String, bool>>>.
+```txt
+Testing:
+```
 
-#### Practice Server
-- practice_tool: Practice to test skill of user. Receive (module - ["knowledge"]) return [{"module_name": "practice",}].
+If the prompt does not start with `Testing:`, ignore this overlay.
 
-Params - Return:
-- practice_tool: (lesson: HashMap<String, Vec<String>>) -> rmcp::CallToolResult<Vec<HashMap<String, String>>>.
+## Testing Rules
 
-#### Database Server
-- infomation_tool: CRUD infomation of user.
-- lesson_db_tool: CRUD lesson.
-- roadmap_db_tool: CRUD roadmap.
-- practice_db_tool: CRUD practice.
+- Keep using exact server and tool names from the active tool catalog.
+- Do not invent mock server names unless the active catalog itself contains them.
+- Do not use human-readable server labels. Use exact runtime names from the catalog.
+- Do not add params to `PlanStep`.
+- Reasoning action objects must have only the `type` field; put all instructions in `step_goal`.
+- Binding objects must use only the exact enum shapes from the production binding contract.
+- Prefer tiny deterministic plans that are easy for unit and integration tests to inspect.
 
-Params - Return:
-- All tool: (data) -> rmcp::CallToolResult<String>.
+## Valid Testing Plan Shape
 
-#### External Server
-Many External server: Github MCP, Figma MCP, Notion MCP.
+```json
+{
+  "steps": [
+    {
+      "id": "step 1",
+      "action": {"type": "Reasoning"},
+      "step_goal": "Summarize the testing goal without calling external tools.",
+      "dependencies": [],
+      "final_output": "summary"
+    }
+  ],
+  "goal": "testing workflow"
+}
+```
 
-## Strategy
-when prompt have span ```Testing: user prompt``` that is enable for testing, using all tool mocking that describe to plan and execute.
+## Valid Testing Binding Shape
+
+```json
+{
+  "binding": {
+    "step_id": "step 1",
+    "input": {
+      "type": "Context",
+      "keys": [
+        {"from": "goal", "to": "goal"}
+      ]
+    },
+    "output": {
+      "type": "Scratchpad",
+      "name": "testing_summary"
+    },
+    "expected_schema": null
+  }
+}
+```

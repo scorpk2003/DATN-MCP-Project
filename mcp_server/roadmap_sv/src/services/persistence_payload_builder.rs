@@ -1,10 +1,12 @@
 #![allow(dead_code)]
 
 use serde_json::{Value, json};
+use uuid::Uuid;
 
 use crate::domain::{
     DatabaseMcpToolCall, DatabaseReadyRoadmapPayload, OrchestratorPersistencePlan,
-    PersistenceOwner, RoadmapGraph, RoadmapNode, RoadmapPhase, required_database_capabilities,
+    PersistenceOwner, ResourceBinding, RoadmapGraph, RoadmapNode, RoadmapPhase,
+    required_database_capabilities,
 };
 
 pub fn build_database_ready_payload(graph: &RoadmapGraph) -> DatabaseReadyRoadmapPayload {
@@ -30,123 +32,181 @@ pub fn build_database_ready_payload(graph: &RoadmapGraph) -> DatabaseReadyRoadma
 
 fn build_database_calls(graph: &RoadmapGraph) -> Vec<DatabaseMcpToolCall> {
     let mut calls = Vec::new();
+    let roadmap_title = graph
+        .metadata
+        .get("normalizedGoal")
+        .and_then(Value::as_str)
+        .unwrap_or("Generated learning roadmap")
+        .to_string();
+
+    let existing_project_id = graph
+        .project_id
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+        .filter(|value| Uuid::parse_str(value).is_ok());
+    let project_id = match existing_project_id {
+        Some(project_id) => Value::String(project_id.to_string()),
+        None => {
+            let (user_id, user_dependency) = resolve_project_owner(graph, &mut calls);
+            calls.push(DatabaseMcpToolCall {
+                tool_name: "create_project".to_string(),
+                arguments: json!({
+                    "user_id": user_id,
+                    "title": roadmap_title,
+                    "description": "Project created from Roadmap MCP persistence plan.",
+                    "status": "draft",
+                }),
+                depends_on: user_dependency,
+                result_alias: Some("project".to_string()),
+            });
+            Value::String("${project.id}".to_string())
+        }
+    };
 
     calls.push(DatabaseMcpToolCall {
         tool_name: "create_roadmap".to_string(),
         arguments: json!({
-            "userId": graph.user_id,
-            "status": graph.status,
-            "metadata": graph.metadata,
-            "coverageSummary": graph.coverage_summary,
-            "resourceSummary": graph.resource_summary,
-            "gapWarnings": graph.gap_warnings,
-            "generatedBy": "roadmap_mcp",
+            "project_id": project_id,
+            "version": 1,
+            "title": roadmap_title,
+            "generated_by": "roadmap_mcp",
         }),
-        depends_on: vec![],
+        depends_on: if existing_project_id.is_some() {
+            vec![]
+        } else {
+            vec!["project".to_string()]
+        },
         result_alias: Some("roadmap".to_string()),
     });
 
     for phase in &graph.phases {
         calls.push(phase_call(phase));
     }
-    for node in &graph.nodes {
-        calls.push(node_call(node));
+    for (index, node) in graph.nodes.iter().enumerate() {
+        calls.push(milestone_call(node, index));
+        calls.push(task_call(node));
         for resource_ref in &node.resource_refs {
-            calls.push(DatabaseMcpToolCall {
-                tool_name: "attach_resource_ref_to_node".to_string(),
-                arguments: json!({
-                    "nodeId": format!("${{node:{}}}.nodeId", node.node_id),
-                    "resourceRef": resource_ref,
-                }),
-                depends_on: vec![format!("node:{}", node.node_id)],
-                result_alias: Some(format!(
-                    "resource_ref:{}:{}",
-                    node.node_id, resource_ref.resource_id
-                )),
-            });
+            calls.push(resource_call(node, resource_ref));
         }
     }
-    for edge in &graph.edges {
-        calls.push(DatabaseMcpToolCall {
-            tool_name: "create_roadmap_edge".to_string(),
-            arguments: json!({
-                "roadmapId": "${roadmap.roadmapId}",
-                "fromNodeId": format!("${{node:{}}}.nodeId", edge.from_node_id),
-                "toNodeId": format!("${{node:{}}}.nodeId", edge.to_node_id),
-                "edgeType": edge.edge_type,
-                "reason": edge.reason,
-            }),
-            depends_on: vec![
-                "roadmap".to_string(),
-                format!("node:{}", edge.from_node_id),
-                format!("node:{}", edge.to_node_id),
-            ],
-            result_alias: Some(format!("edge:{}:{}", edge.from_node_id, edge.to_node_id)),
-        });
-    }
-
-    calls.push(DatabaseMcpToolCall {
-        tool_name: "create_audit_event".to_string(),
-        arguments: json!({
-            "roadmapId": "${roadmap.roadmapId}",
-            "eventType": "roadmap_generated",
-            "source": "roadmap_mcp",
-            "summary": {
-                "nodeCount": graph.nodes.len(),
-                "phaseCount": graph.phases.len(),
-                "status": graph.status,
-                "coverageSummary": graph.coverage_summary,
-            }
-        }),
-        depends_on: vec!["roadmap".to_string()],
-        result_alias: Some("audit_event".to_string()),
-    });
 
     calls
 }
 
+fn resolve_project_owner(
+    graph: &RoadmapGraph,
+    calls: &mut Vec<DatabaseMcpToolCall>,
+) -> (Value, Vec<String>) {
+    let Some(user_id) = graph
+        .user_id
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+    else {
+        return (Value::Null, vec![]);
+    };
+
+    if Uuid::parse_str(user_id).is_ok() {
+        return (Value::String(user_id.to_string()), vec![]);
+    }
+
+    calls.push(DatabaseMcpToolCall {
+        tool_name: "upsert_user".to_string(),
+        arguments: json!({
+            "firebase_id": user_id,
+            "display_name": Value::Null,
+            "email": Value::Null,
+        }),
+        depends_on: vec![],
+        result_alias: Some("user".to_string()),
+    });
+
+    (Value::String(user_id.to_string()), vec!["user".to_string()])
+}
+
 fn phase_call(phase: &RoadmapPhase) -> DatabaseMcpToolCall {
     DatabaseMcpToolCall {
-        tool_name: "create_roadmap_phase".to_string(),
+        tool_name: "create_phase".to_string(),
         arguments: json!({
-            "roadmapId": "${roadmap.roadmapId}",
-            "phaseId": phase.phase_id,
+            "roadmap_id": "${roadmap.id}",
+            "phase_order": phase.order_index,
             "title": phase.title,
-            "purpose": phase.purpose,
-            "orderIndex": phase.order_index,
-            "estimatedHours": phase.estimated_hours,
-            "nodeIds": phase.node_ids,
-            "exitCriteria": phase.exit_criteria,
+            "description": phase.purpose,
+            "estimated_days": estimated_days_from_hours(phase.estimated_hours),
         }),
         depends_on: vec!["roadmap".to_string()],
         result_alias: Some(format!("phase:{}", phase.phase_id)),
     }
 }
 
-fn node_call(node: &RoadmapNode) -> DatabaseMcpToolCall {
+fn milestone_call(node: &RoadmapNode, index: usize) -> DatabaseMcpToolCall {
     DatabaseMcpToolCall {
-        tool_name: "create_roadmap_node".to_string(),
+        tool_name: "create_milestone".to_string(),
         arguments: json!({
-            "roadmapId": "${roadmap.roadmapId}",
-            "phaseId": format!("${{phase:{}}}.phaseId", node.phase_id),
-            "clientNodeId": node.node_id,
+            "phase_id": format!("${{phase:{}.id}}", node.phase_id),
+            "milestone_order": index + 1,
             "title": node.title,
-            "topic": node.topic,
-            "aliases": node.aliases,
-            "nodeType": node.node_type,
-            "level": node.level,
-            "purpose": node.purpose,
-            "learningOutcomes": node.learning_outcomes,
-            "prerequisites": node.prerequisites,
-            "estimatedHours": node.estimated_hours,
-            "coverageStatus": node.coverage_status,
-            "missingResourceTypes": node.missing_resource_types,
-            "warnings": node.warnings,
-            "status": node.status,
+            "description": node.purpose,
         }),
         depends_on: vec!["roadmap".to_string(), format!("phase:{}", node.phase_id)],
-        result_alias: Some(format!("node:{}", node.node_id)),
+        result_alias: Some(format!("milestone:{}", node.node_id)),
     }
+}
+
+fn task_call(node: &RoadmapNode) -> DatabaseMcpToolCall {
+    DatabaseMcpToolCall {
+        tool_name: "create_task".to_string(),
+        arguments: json!({
+            "milestone_id": format!("${{milestone:{}.id}}", node.node_id),
+            "task_order": 1,
+            "title": node.title,
+            "description": task_description(node),
+            "estimated_hours": node.estimated_hours,
+            "difficulty": format!("{:?}", node.level).to_ascii_lowercase(),
+            "status": task_status(node),
+        }),
+        depends_on: vec![format!("milestone:{}", node.node_id)],
+        result_alias: Some(format!("task:{}", node.node_id)),
+    }
+}
+
+fn resource_call(node: &RoadmapNode, resource: &ResourceBinding) -> DatabaseMcpToolCall {
+    DatabaseMcpToolCall {
+        tool_name: "create_resource".to_string(),
+        arguments: json!({
+            "task_id": format!("${{task:{}.id}}", node.node_id),
+            "resource_type": resource.kind,
+            "title": resource.title,
+            "url": resource.canonical_url,
+            "description": resource.source_domain,
+        }),
+        depends_on: vec![format!("task:{}", node.node_id)],
+        result_alias: Some(format!(
+            "resource:{}:{}",
+            node.node_id, resource.resource_id
+        )),
+    }
+}
+
+fn estimated_days_from_hours(hours: u32) -> i32 {
+    hours.div_ceil(2) as i32
+}
+
+fn task_status(node: &RoadmapNode) -> &'static str {
+    match node.status {
+        crate::domain::NodeStatus::Blocked | crate::domain::NodeStatus::Placeholder => "blocked",
+        _ => "pending",
+    }
+}
+
+fn task_description(node: &RoadmapNode) -> String {
+    let mut parts = vec![node.purpose.clone()];
+    if !node.learning_outcomes.is_empty() {
+        parts.push(format!("Outcomes: {}", node.learning_outcomes.join("; ")));
+    }
+    if !node.warnings.is_empty() {
+        parts.push(format!("Warnings: {}", node.warnings.join("; ")));
+    }
+    parts.join("\n")
 }
 
 pub fn payload_summary(payload: &DatabaseReadyRoadmapPayload) -> Value {
@@ -195,7 +255,7 @@ mod tests {
                 .orchestrator_persistence_plan
                 .database_mcp_calls
                 .iter()
-                .any(|call| call.tool_name == "create_roadmap_node")
+                .any(|call| call.tool_name == "create_task")
         );
     }
 
@@ -205,8 +265,45 @@ mod tests {
         let payload = build_database_ready_payload(&graph);
         let calls = payload.orchestrator_persistence_plan.database_mcp_calls;
 
+        assert_eq!(calls[0].tool_name, "upsert_user");
+        assert_eq!(calls[1].tool_name, "create_project");
+        assert_eq!(calls[2].tool_name, "create_roadmap");
+        assert!(calls[2].arguments.get("project_id").is_some());
+        assert!(calls[3].depends_on.contains(&"roadmap".to_string()));
+    }
+
+    #[test]
+    fn existing_project_id_skips_project_creation() {
+        let mut graph = sample_graph();
+        graph.project_id = Some("11111111-1111-1111-1111-111111111111".to_string());
+        let payload = build_database_ready_payload(&graph);
+        let calls = payload.orchestrator_persistence_plan.database_mcp_calls;
+
         assert_eq!(calls[0].tool_name, "create_roadmap");
-        assert!(calls[1].depends_on.contains(&"roadmap".to_string()));
+        assert_eq!(
+            calls[0].arguments["project_id"],
+            "11111111-1111-1111-1111-111111111111"
+        );
+        assert!(
+            !calls
+                .iter()
+                .any(|call| call.tool_name == "create_project" || call.tool_name == "upsert_user")
+        );
+    }
+
+    #[test]
+    fn non_uuid_project_id_does_not_reach_database_project_uuid_field() {
+        let mut graph = sample_graph();
+        graph.project_id = Some("frontend-project-id".to_string());
+        let payload = build_database_ready_payload(&graph);
+        let calls = payload.orchestrator_persistence_plan.database_mcp_calls;
+
+        assert!(calls.iter().any(|call| call.tool_name == "create_project"));
+        let roadmap_call = calls
+            .iter()
+            .find(|call| call.tool_name == "create_roadmap")
+            .unwrap();
+        assert_eq!(roadmap_call.arguments["project_id"], "${project.id}");
     }
 
     fn sample_graph() -> RoadmapGraph {
@@ -260,6 +357,7 @@ mod tests {
 
         build_roadmap_graph(
             Some("user_1".to_string()),
+            None,
             &goal,
             &selection.blueprint,
             &bound,

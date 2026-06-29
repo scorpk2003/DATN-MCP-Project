@@ -15,6 +15,7 @@ export const uiActionRequestSchema = z.object({
   status: z.enum(["pending", "resolved"]).default("pending"),
   createdAt: z.string(),
   resolvedAt: z.string().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const respondActionRequestSchema = z.object({

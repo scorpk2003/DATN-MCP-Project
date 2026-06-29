@@ -60,6 +60,8 @@ pub struct RoadmapConstraints {
 pub struct RoadmapGenerationRequest {
     #[serde(rename = "userId")]
     pub user_id: Option<String>,
+    #[serde(rename = "projectId")]
+    pub project_id: Option<String>,
     #[serde(rename = "learningGoal")]
     pub learning_goal: String,
     #[serde(rename = "currentLevel")]

@@ -56,6 +56,8 @@ pub struct RoadmapGraph {
     pub roadmap_id: Option<String>,
     #[serde(rename = "userId")]
     pub user_id: Option<String>,
+    #[serde(rename = "projectId")]
+    pub project_id: Option<String>,
     pub status: RoadmapStatus,
     pub metadata: Value,
     pub phases: Vec<RoadmapPhase>,

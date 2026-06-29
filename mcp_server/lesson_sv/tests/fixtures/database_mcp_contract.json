@@ -1,5 +1,5 @@
 {
-  "contractStatus": "missing_database_tools",
+  "contractStatus": "verified",
   "currentDatabaseMcpTools": [
     "create_user",
     "get_user_by_id",
@@ -37,7 +37,12 @@
     "get_learning_history",
     "get_multi_schema",
     "get_schema",
-    "get_health_check"
+    "get_health_check",
+    "create_lesson",
+    "create_lesson_block",
+    "link_lesson_resource",
+    "create_lesson_exercise",
+    "create_lesson_quiz"
   ],
   "requiredLessonTools": [
     "create_lesson",

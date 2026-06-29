@@ -54,8 +54,17 @@ struct TopicEval {
     failures: Vec<String>,
 }
 
+fn load_env() {
+    dotenv::dotenv().ok();
+    for path in ["../.env", "../../.env", "../../../.env"] {
+        dotenv::from_path(path).ok();
+    }
+}
+
 #[tokio::main]
 async fn main() -> AppResult<()> {
+    load_env();
+
     let args = Args::parse()?;
     let manifest = load_evaluation_manifest(&args.manifest)?;
     let config = AppConfig::from_env();

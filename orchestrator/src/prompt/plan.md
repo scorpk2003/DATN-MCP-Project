@@ -1,101 +1,142 @@
 # Planning Strategy
 
-## Phase Goal
-- You will extract user prompt and Planning Flow that executed in Rust Programming Language. Your plan will help user satified. Before planning following strategy below, you must clear something to have good plan.
-- Context Flow: Your main goal when you planning is also the main context to execute. Each step can fail so context must clear and not too long. Failure Strategy will use your main context to re-plan that falling step.
-- Tool Knowing: Knowing all tools exist and description all of it.
-- Clarify 3 "WHAT" problem:
-  + WHAT user want: Know exactly the user goal.
-  + WHAT need for user: Depends on tools exist, you will build skeleton base tools are need for user.
-  + WHAT should happen: Your plan will clarify what should happen with each step. Don't afraid of HOW exactly data flows.
-+ Example: "I want to learn System Design"
---> WHAT user want: Learn System Design.
---> WHAT need for user: ["generate_roadmap", "extract_topic", "generate_quizz", "practice", "generate_lesson"].
---> WHAT should happen: {"step 1": "extract_topic"} -> {"step 2": "generate_roadmap"} -> {"step 3": "Confirm Roadmap from user"} -> {"step 4": "generate_lesson"} -> {"step 5": "Store Roadmap and lesson"} -> {"step 6": "generate_quizz"} -> {"step 7": "practice"}.
+## Purpose
 
-## Schema Knowledge
-- Agent Context: Many field about context of execution flow - session id, main context, field exist.
+Create an intent-level execution plan for the Rust orchestrator.
 
-### StepActions Format
-- Step Actions: Action need for step.
+Planning does not build tool parameters. Planning only selects the next actions, their order, their dependencies, and which step outputs should appear in the final response.
+
+## Required Output
+
+Return only raw JSON with this exact top-level shape:
+
 ```json
-/// Calling Tool
-{"type": "ToolCall", "server": "server_name", "tool": "tool_name"}
+{
+  "steps": [],
+  "goal": "short workflow goal"
+}
+```
 
-// Response or re-plan
-{"type": "Reasoning", "instruction": "what_should_reasoning"}
+`steps` must deserialize into `Vec<PlanStep>`.
 
-// Step have ambigous result or need choose from user
+## PlanStep Contract
+
+Every step must have this shape:
+
+```json
+{
+  "id": "step 1",
+  "action": {"type": "Reasoning"},
+  "step_goal": "describe the intent of this step",
+  "dependencies": [],
+  "final_output": null
+}
+```
+
+Allowed fields:
+
+- `id`: stable string id. Use sequential ids: `step 1`, `step 2`, `step 3`.
+- `action`: one of the three allowed action shapes below.
+- `step_goal`: plain-language intent. Put all reasoning instructions here.
+- `dependencies`: ids of earlier steps this step depends on.
+- `final_output`: string key to include this step output in the final response, or `null`.
+
+## Allowed Action Shapes
+
+Use exactly one of these JSON shapes:
+
+```json
+{"type": "ToolCall", "server": "exact_server_name", "tool": "exact_tool_name"}
+```
+
+```json
+{"type": "Reasoning"}
+```
+
+```json
 {"type": "HumanApproval"}
 ```
 
-### PlanStep Format
-- Plan Step: Plan for the step.
-```json
-{
-  "id": "Serial of step",
-  "action": "StepActions describe above",
-  "step_goal": "Goal for step that execute complicated cause break data flow",
-  "dependencies": ["List of step that current step depends on(context of parallelism execution if exist)"],
-  "final_output": "Name of value that you think output of step will be a part exist in final output",
-}
-```
+Do not add extra fields to `action`. Each action object must match one of the three allowed shapes exactly.
 
-## Plan Flow
-You will Planning Flow following each step below:
-1. Server Connect: You knew about all MCP server and tools exist, all of that server in state of lazy connect so you will decide which server willing connect.
-2. Action planning: Now you know relations of input-output, you will planning action(```StepActions```) need to execute.
-3. Step Format: You will know Plan Step Schema in Output Format above and complete Plan for Step.
-  - Step Goal Attention: Expose step goal if you predicted that step will have ambigous input/output or have so much dependencies can't handle by context or in case of action Reasoning(because this action surely return to user).
-  - Example: Step 02 have target for is list of topic sort following user state -> input will join 2 database topic_db, user_db sort following "user.state". Step 02 have dependencies = ["step_1.1", "step_1.2", "step_1.3"] -> so complicated.
-4. Recursive: After step 3. your plan is complete for one step, continous from step 1. when your plan will satified with user goal(if executed).
-5. Parallelism: Serialize step id for multi-step that will execute parallelism following ".*"(Ex: step 3 have two step parallelism ["step 3.1", "step 3.2"]). In case of testing, don't contain paralelism step.
-6. Final Output: Expose if output of step is a part of final output will response to user.
-7. Return raw Json is a list Plan Step doesn't contain markdown or anything and main context is a goal of flow.
+Never encode a tool as `{"type":"server.tool"}`. That is a function-name shorthand, not a valid `PlanStep` action. Always use `{"type":"ToolCall","server":"server","tool":"tool"}`.
+
+## Planning Rules
+
+- Use only server and tool names that exist in the tool catalog appended to this system prompt.
+- Tool server names must be exact runtime names, for example `roadmap`, `lesson`, `resource`, or `database` when those names are present in the catalog.
+- Database MCP tools are internal persistence tools and are intentionally not exposed in the planning catalog. Do not plan direct `database.*` calls. Use `roadmap`, `lesson`, or `resource` tools; the Rust runtime executes Database MCP persistence plans with generated DB UUIDs.
+- Do not use human-readable server labels. Use exact runtime names from the catalog.
+- Do not generate tool parameters in the plan.
+- Do not generate context paths in the plan.
+- Do not combine parameter generation and tool execution in the same step.
+- If a tool requires data that does not yet exist, add an earlier `Reasoning` or `ToolCall` step that produces the needed data.
+- If the user must confirm a roadmap, lesson, write operation, or ambiguous choice, add a `HumanApproval` step before continuing.
+- Execution is sequential. Do not create parallel step ids such as `step 2.1` or `step 2.2`.
+- Dependencies must reference earlier step ids only.
+- Keep plans short. Prefer the minimum number of steps that can satisfy the goal safely.
+
+## Action Selection Guidance
+
+Use `ToolCall` when a real MCP tool should be executed.
+
+Use `Reasoning` when the runtime needs an LLM-only transformation, summary, selection, or final response. The instruction for the reasoning step belongs in `step_goal`.
+
+Use `HumanApproval` when user approval is needed before continuing. The approval question belongs in `step_goal`.
 
 ## Re-planning
-- In case of step exection failed, you will watch observation and re-plan start from step that execute failed. If you evaluate the cause of failed step can't fix, return following this format:
+
+When re-planning after a failed step, return a replacement plan starting from the failed work. The runtime will reset execution to the first step in the new plan.
+
+If the failure cannot be fixed by a new plan, return:
+
 ```json
 {
-  "cause": ["cause_that_break_programs"],
+  "cause": "short explanation of why the workflow cannot continue"
 }
 ```
 
-## Ouput Format
-The value that you return will use for Rust Programming Language, unless planning exactly the program will break.
-- Output Json Schema:
-```json
-// Output Format
-{
-  "steps": [
-    {
-      // Plan Step 1
-    },
-    {
-      // Plan Step 2
-    },
-  ],
-  "goal": "flow_goal"
-}
-```
+`cause` must be a string.
 
-## Example
-- Prompt: Learn Rust Basic.
+## Valid Example
+
 ```json
 {
   "steps": [
     {
       "id": "step 1",
-      "action": {"type": "ToolCall", "server": "Roadmap Server", "tool": "generate_roadmap"},
-      "dependencies": [""]
+      "action": {"type": "ToolCall", "server": "roadmap", "tool": "generate_roadmap_from_goal"},
+      "step_goal": "Generate a learning roadmap from the learner goal.",
+      "dependencies": [],
+      "final_output": "roadmap"
     },
     {
-        // Step 2
+      "id": "step 2",
+      "action": {"type": "HumanApproval"},
+      "step_goal": "Ask the learner to approve, reject, or revise the generated roadmap.",
+      "dependencies": ["step 1"],
+      "final_output": null
     },
     {
-        // Step 3
-    },
+      "id": "step 3",
+      "action": {"type": "Reasoning"},
+      "step_goal": "Summarize the approved roadmap and next recommended action for the learner.",
+      "dependencies": ["step 1", "step 2"],
+      "final_output": "summary"
+    }
   ],
-  "goal": "provide roadmap and start learn"
+  "goal": "provide a roadmap and next action"
 }
 ```
+
+The tool names in the example are illustrative. In real output, use exact names from the available tool catalog.
+
+## Invalid Patterns
+
+Do not add extra fields to action objects.
+
+Do not put tool names in `action.type`, such as `{"type":"lesson.lesson_analyze_node"}`.
+
+Do not use display names for servers.
+
+Do not produce a step whose `step_goal` says to build tool input and call a tool in one step. Split that into separate steps.

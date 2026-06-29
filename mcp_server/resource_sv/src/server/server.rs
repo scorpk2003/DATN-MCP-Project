@@ -63,8 +63,9 @@ impl ResourceMcpServer {
         let addr = format!("{}:{}", self.config.host.clone(), self.config.port.clone());
         info!("\tStarting Resource MCP Server at: {addr}");
 
-        let config =
-            StreamableHttpServerConfig::default().with_cancellation_token(CancellationToken::new());
+        let config = StreamableHttpServerConfig::default()
+            .with_allowed_hosts(allowed_mcp_hosts())
+            .with_cancellation_token(CancellationToken::new());
         let service = StreamableHttpService::new(
             move || Ok(self.clone()),
             Arc::new(LocalSessionManager::default()),
@@ -513,6 +514,18 @@ fn project_chunks_response(
 
 fn is_error(value: &Value) -> bool {
     value.get("ok").and_then(Value::as_bool) == Some(false)
+}
+
+fn allowed_mcp_hosts() -> Vec<String> {
+    dotenv::var("MCP_ALLOWED_HOSTS")
+        .unwrap_or_else(|_| {
+            "localhost,127.0.0.1,::1,database-mcp,roadmap-mcp,resource-mcp,lesson-mcp".to_string()
+        })
+        .split(',')
+        .map(str::trim)
+        .filter(|host| !host.is_empty())
+        .map(ToString::to_string)
+        .collect()
 }
 
 #[cfg(test)]

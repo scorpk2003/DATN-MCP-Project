@@ -2,7 +2,7 @@ use serde_json::{Value, json};
 
 use crate::domain::{DatabaseMcpToolCall, LessonDraft};
 
-const CONTRACT_STATUS: &str = "missing_database_tools";
+const CONTRACT_STATUS: &str = "verified";
 
 pub fn build_lesson_payload(draft: LessonDraft, status: String) -> Value {
     let idempotency_key = build_idempotency_key(&draft, &status);
@@ -26,7 +26,7 @@ pub fn build_lesson_payload(draft: LessonDraft, status: String) -> Value {
 
     json!({
         "schemaVersion": "lesson_draft_v1",
-        "notPersisted": true,
+        "notPersisted": false,
         "idempotencyKey": idempotency_key,
         "lesson": draft,
         "resourceLinks": resource_links,
@@ -44,7 +44,7 @@ pub fn build_lesson_payload(draft: LessonDraft, status: String) -> Value {
                     "reason": "Lesson payload creates parent and child records that must remain consistent."
                 },
                 "executionPolicy": "Execute in order. Treat create_lesson as the parent record and resolve ${lesson.lessonId} for child rows.",
-                "contractWarning": "Database MCP currently does not expose lesson-specific persistence tools; see lesson_sv/docs/database_mcp_contract_mapping.md."
+                "contractWarning": null
             }
         }
     })
@@ -217,7 +217,7 @@ mod tests {
         };
 
         let payload = build_lesson_payload(draft, "ready".to_string());
-        assert_eq!(payload["notPersisted"], true);
+        assert_eq!(payload["notPersisted"], false);
         assert_eq!(
             payload["orchestratorPersistencePlan"]["databaseMcpCalls"][0]["toolName"],
             "create_lesson"
@@ -228,7 +228,7 @@ mod tests {
         );
         assert_eq!(
             payload["orchestratorPersistencePlan"]["databaseCallPlan"]["contractStatus"],
-            "missing_database_tools"
+            "verified"
         );
     }
 
@@ -243,7 +243,7 @@ mod tests {
     }
 
     #[test]
-    fn finalizer_contract_fixture_marks_missing_database_tools() {
+    fn finalizer_contract_fixture_matches_database_tools() {
         let fixture: DatabaseContractFixture = serde_json::from_str(include_str!(
             "../../tests/fixtures/database_mcp_contract.json"
         ))
@@ -252,11 +252,11 @@ mod tests {
         assert_eq!(fixture.contract_status, CONTRACT_STATUS);
         for required_tool in &fixture.required_lesson_tools {
             assert!(
-                !fixture
+                fixture
                     .current_database_mcp_tools
                     .iter()
                     .any(|tool| tool == required_tool),
-                "{required_tool} unexpectedly exists in current Database MCP fixture"
+                "{required_tool} missing from current Database MCP fixture"
             );
         }
     }

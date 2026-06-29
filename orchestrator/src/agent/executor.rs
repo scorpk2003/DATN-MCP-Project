@@ -1,7 +1,9 @@
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{AgentContext, PlanStep, StepBinding};
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ExecutionStatus {
     Init,
     Planning,
@@ -12,6 +14,7 @@ pub enum ExecutionStatus {
     Failed(String),
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExecutionState {
     pub session_id: String,
     pub status: ExecutionStatus,

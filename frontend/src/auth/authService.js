@@ -7,7 +7,13 @@ import {
   signInWithPopup,
   signOut,
 } from "firebase/auth";
-import { firebaseConfig, isFirebaseConfigured } from "../config/env.js";
+import { ALLOW_DEV_AUTH, firebaseConfig, isFirebaseConfigured } from "../config/env.js";
+
+const devUser = {
+  uid: "dev-learner",
+  email: "dev-learner@local.test",
+  displayName: "Dev Learner",
+};
 
 let firebaseApp;
 let firebaseAuth;
@@ -26,6 +32,11 @@ export function getFirebaseAuth() {
 }
 
 export function subscribeToAuthState(callback) {
+  if (ALLOW_DEV_AUTH) {
+    callback(devUser);
+    return () => {};
+  }
+
   const auth = getFirebaseAuth();
 
   if (!auth) {

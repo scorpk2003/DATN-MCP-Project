@@ -45,16 +45,15 @@ pub struct DatabaseMcpToolCall {
 
 pub fn required_database_capabilities() -> Vec<&'static str> {
     vec![
-        "get_user_profile",
-        "get_user_learning_context",
-        "list_user_roadmaps",
+        "upsert_user",
+        "get_user_by_id",
+        "list_projects",
+        "list_project_roadmap",
+        "create_project",
         "create_roadmap",
-        "create_roadmap_phase",
-        "create_roadmap_node",
-        "create_roadmap_edge",
-        "attach_resource_ref_to_node",
-        "update_roadmap_status",
-        "get_roadmap_detail",
-        "create_audit_event",
+        "create_phase",
+        "create_milestone",
+        "create_task",
+        "create_resource",
     ]
 }

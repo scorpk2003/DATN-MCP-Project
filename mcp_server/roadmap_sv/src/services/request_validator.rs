@@ -207,6 +207,7 @@ mod tests {
     fn returns_normalized_valid_request() {
         let result = validate_roadmap_request(RoadmapGenerationRequest {
             user_id: None,
+            project_id: None,
             learning_goal: "learn React basics".to_string(),
             current_level: None,
             target_role: None,
@@ -228,6 +229,7 @@ mod tests {
     fn rejects_contradictory_time_budget() {
         let result = validate_roadmap_request(RoadmapGenerationRequest {
             user_id: None,
+            project_id: None,
             learning_goal: "learn backend".to_string(),
             current_level: None,
             target_role: None,
@@ -252,6 +254,7 @@ mod tests {
     fn rejects_stack_excluded_topic_overlap() {
         let result = validate_roadmap_request(RoadmapGenerationRequest {
             user_id: None,
+            project_id: None,
             learning_goal: "learn backend".to_string(),
             current_level: None,
             target_role: None,

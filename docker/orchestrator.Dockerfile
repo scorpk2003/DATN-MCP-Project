@@ -1,6 +1,7 @@
 FROM rust:1-bookworm AS build
 
 WORKDIR /app/orchestrator
+ENV CARGO_TARGET_DIR=/tmp/cargo-target
 COPY orchestrator/ ./
 RUN cargo build --release
 
@@ -11,7 +12,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app/orchestrator
-COPY --from=build /app/orchestrator/target/release/orchestrator /usr/local/bin/orchestrator
+COPY --from=build /tmp/cargo-target/release/orchestrator /usr/local/bin/orchestrator
 COPY orchestrator/src/prompt ./src/prompt
 
 EXPOSE 3000

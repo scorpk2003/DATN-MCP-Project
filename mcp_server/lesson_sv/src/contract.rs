@@ -18,7 +18,7 @@ pub fn lesson_contract() -> Value {
                 "User account management.",
                 "Long-term roadmap generation.",
                 "Web crawling, indexing, or source ranking.",
-                "Direct application database persistence in v0.1.",
+                "Direct application database persistence; Orchestrator owns executing Database MCP call plans.",
                 "System-level learning strategy decisions."
             ]
         },
@@ -122,7 +122,7 @@ pub fn lesson_contract() -> Value {
         ],
         "databaseMcpDependencyMode": "Orchestrator executes database calls produced by Lesson MCP payloads.",
         "databaseContract": {
-            "status": "missing_database_tools",
+            "status": "verified",
             "mappingDocument": "mcp_server/lesson_sv/docs/database_mcp_contract_mapping.md",
             "requiredLessonTools": [
                 "create_lesson",
@@ -131,7 +131,7 @@ pub fn lesson_contract() -> Value {
                 "create_lesson_exercise",
                 "create_lesson_quiz"
             ],
-            "currentDatabaseMcpHasLessonTools": false
+            "currentDatabaseMcpHasLessonTools": true
         },
         "observability": {
             "status": "ready",

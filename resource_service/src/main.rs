@@ -20,9 +20,16 @@ fn init_tracing(level: &str) {
     }
 }
 
+fn load_env() {
+    dotenv::dotenv().ok();
+    for path in ["../.env", "../../.env", "../../../.env"] {
+        dotenv::from_path(path).ok();
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
-    dotenv::from_path("../.env").ok();
+    load_env();
 
     let config = AppConfig::from_env();
     init_tracing(&config.log_level);
