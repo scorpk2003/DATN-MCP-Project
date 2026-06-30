@@ -10,6 +10,7 @@ WORKDIR /app/agent_gateway
 ENV NODE_ENV=production
 COPY --from=deps /app/agent_gateway/node_modules ./node_modules
 COPY agent_gateway/ ./
+COPY tools/ ../tools/
 
 EXPOSE 4000
 CMD ["npm", "run", "start"]

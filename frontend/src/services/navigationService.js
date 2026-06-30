@@ -3,7 +3,7 @@ import { sidebarItems } from "../data/navigationData.js";
 import { request } from "../lib/httpClient.js";
 
 export async function getNavigationData() {
-  return request("/api/navigation", {
+  return request("/navigation", {
     fallback: () => ({
       recentChats,
       sidebarItems,

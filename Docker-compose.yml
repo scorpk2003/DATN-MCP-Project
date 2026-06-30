@@ -24,6 +24,7 @@ services:
       AGENT_GATEWAY_HOST: 0.0.0.0
       AGENT_GATEWAY_PORT: ${AGENT_GATEWAY_PORT:-4000}
       ORCHESTRATOR_BASE_URL: http://orchestrator:${ORCHESTRATOR_PORT:-3000}
+      DATABASE_MCP_BASE_URL: http://database-mcp:${SERVER_DATABASE_PORT:-3101}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
     ports:
       - "${AGENT_GATEWAY_HOST_PORT:-4000}:${AGENT_GATEWAY_PORT:-4000}"
@@ -84,8 +85,35 @@ services:
       MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:-localhost,127.0.0.1,::1,database-mcp,roadmap-mcp,resource-mcp,lesson-mcp}
       SERVER_DATABASE_HOST: 0.0.0.0
       SERVER_DATABASE_PORT: ${SERVER_DATABASE_PORT:-3101}
+      DB_HOST: ${DB_HOST:-app-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-datn}
+      DB_USER: ${DB_USER:-datn}
+      DB_PASS: ${DB_PASS:-datn}
+      DB_SSL_MODE: ${DB_SSL_MODE:-require}
     ports:
       - "${SERVER_DATABASE_HOST_PORT:-3101}:${SERVER_DATABASE_PORT:-3101}"
+    networks:
+      - datn-network
+
+  app-postgres:
+    image: postgres:16-alpine
+    profiles:
+      - local-db
+    environment:
+      POSTGRES_DB: ${APP_DB_NAME:-datn}
+      POSTGRES_USER: ${APP_DB_USER:-datn}
+      POSTGRES_PASSWORD: ${APP_DB_PASS:-datn}
+    ports:
+      - "${APP_POSTGRES_HOST_PORT:-55432}:5432"
+    volumes:
+      - app-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
     networks:
       - datn-network
 
@@ -156,3 +184,6 @@ networks:
   datn-network:
     name: ${DATN_NETWORK_NAME:-datn-network}
     external: true
+
+volumes:
+  app-postgres-data:

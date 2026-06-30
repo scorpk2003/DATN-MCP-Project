@@ -31,6 +31,7 @@ export class OrchestratorClient {
     sessionId: string;
     userId?: string;
     authContext?: OrchestratorAuthContext;
+    context?: unknown;
     signal?: AbortSignal;
   }) {
     const timeoutController = new AbortController();
@@ -47,6 +48,7 @@ export class OrchestratorClient {
           goal: input.goal,
           session_id: input.sessionId,
           user_id: input.userId,
+          context: input.context,
           auth_context: input.authContext
             ? {
                 user_id: input.authContext.userId,

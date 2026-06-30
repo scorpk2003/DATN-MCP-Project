@@ -8,12 +8,7 @@ export function NotesList({ notes, selectedNoteId, onSelectNote }) {
       {notes.length > 0 ? (
         <div className="grid gap-3">
           {notes.map((note) => (
-            <NoteCard
-              key={note.id}
-              active={note.id === selectedNoteId}
-              note={note}
-              onSelect={onSelectNote}
-            />
+            <NoteCard key={note.id} active={note.id === selectedNoteId} note={note} onSelect={onSelectNote} />
           ))}
         </div>
       ) : (

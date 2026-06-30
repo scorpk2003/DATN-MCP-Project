@@ -1,4 +1,4 @@
-import { getAuthToken } from "../auth/authService.js";
+import { getAuthToken, getAuthUserId } from "../auth/authService.js";
 import { AGENT_GATEWAY_URL } from "../config/env.js";
 
 function buildGatewayUrl(path) {
@@ -11,11 +11,13 @@ function buildGatewayUrl(path) {
 
 async function gatewayRequest(path, options = {}) {
   const token = await getAuthToken();
+  const userId = getAuthUserId();
   const response = await fetch(buildGatewayUrl(path), {
     ...options,
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(userId ? { "X-User-ID": userId } : {}),
       ...options.headers,
     },
   });
@@ -52,8 +54,18 @@ export function sendIntent(sessionId, input) {
   });
 }
 
-export function subscribeRun(sessionId, runId, onEvent, onError) {
-  const eventSource = new EventSource(buildGatewayUrl(`/sessions/${sessionId}/runs/${runId}/stream`));
+export async function subscribeRun(sessionId, runId, onEvent, onError) {
+  const token = await getAuthToken();
+  const userId = getAuthUserId();
+  const query = new URLSearchParams();
+  if (userId) {
+    query.set("userId", userId);
+  }
+  if (token) {
+    query.set("access_token", token);
+  }
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  const eventSource = new EventSource(buildGatewayUrl(`/sessions/${sessionId}/runs/${runId}/stream${suffix}`));
 
   eventSource.addEventListener("agent_event", (raw) => {
     onEvent(JSON.parse(raw.data));

@@ -1,5 +1,5 @@
 import { API_BASE_URL, USE_MOCK_API } from "../config/env.js";
-import { getAuthToken } from "../auth/authService.js";
+import { getAuthToken, getAuthUserId } from "../auth/authService.js";
 
 function buildUrl(path) {
   if (/^https?:\/\//i.test(path)) {
@@ -18,11 +18,13 @@ export async function request(path, options = {}) {
 
   try {
     const token = await getAuthToken();
+    const userId = getAuthUserId();
     const response = await fetch(buildUrl(path), {
       ...fetchOptions,
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(userId ? { "X-User-ID": userId } : {}),
         ...headers,
       },
     });
@@ -37,7 +39,7 @@ export async function request(path, options = {}) {
 
     return response.json();
   } catch (error) {
-    if (fallback) {
+    if (USE_MOCK_API && fallback) {
       return fallback();
     }
 

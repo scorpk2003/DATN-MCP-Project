@@ -27,6 +27,10 @@ const QUICK_PROMPTS = [
 
 const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
 
+function refreshNavigation() {
+  window.dispatchEvent(new CustomEvent("selflearn:navigation-refresh"));
+}
+
 function HomePage() {
   const location = useLocation();
   const { user } = useAuth();
@@ -87,12 +91,25 @@ function HomePage() {
     return state;
   };
 
-  const subscribeToRun = (sessionId, runId) => {
+  const refreshStateUntilRunSettles = async (sessionId, runId) => {
+    let latestState = null;
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      latestState = await refreshState(sessionId);
+      const activeRun = latestState?.activeRun;
+      if (!activeRun || activeRun.id !== runId || TERMINAL_STATUSES.has(activeRun.status)) {
+        return latestState;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    return latestState;
+  };
+
+  const subscribeToRun = async (sessionId, runId) => {
     if (subscriptionsRef.current.has(runId)) {
       return;
     }
 
-    const unsubscribe = subscribeRun(
+    const unsubscribe = await subscribeRun(
       sessionId,
       runId,
       (envelope) => {
@@ -104,6 +121,23 @@ function HomePage() {
     );
     subscriptionsRef.current.set(runId, unsubscribe);
   };
+
+  useEffect(() => {
+    const sessionId = location.state?.sessionId;
+    if (!sessionId) {
+      return;
+    }
+
+    refreshState(sessionId)
+      .then((state) => {
+        if (state?.activeRun) {
+          subscribeToRun(sessionId, state.activeRun.id);
+        }
+      })
+      .catch((stateError) => {
+        setError(stateError instanceof Error ? stateError.message : "Could not load learning session.");
+      });
+  }, [location.state?.sessionId]);
 
   const handleAgentEvent = (event, envelope) => {
     if (event.type === "agent.message") {
@@ -135,6 +169,9 @@ function HomePage() {
 
     if (event.type === "artifact.created") {
       setArtifacts((current) => upsertArtifact(current, event.artifact));
+      if (event.artifact.kind === "roadmap") {
+        refreshNavigation();
+      }
     }
 
     if (event.type === "ui.action_required") {
@@ -155,6 +192,7 @@ function HomePage() {
       });
       if (TERMINAL_STATUSES.has(event.status) || event.status === "waiting_for_user") {
         setIsSubmitting(false);
+        refreshNavigation();
       }
     }
 
@@ -209,6 +247,7 @@ function HomePage() {
           })
         ).session;
       setSession(currentSession);
+      refreshNavigation();
 
       const accepted = await sendIntent(currentSession.id, {
         intent: {
@@ -231,7 +270,7 @@ function HomePage() {
         },
       ]);
       setPrompt("");
-      subscribeToRun(currentSession.id, accepted.run.id);
+      await subscribeToRun(currentSession.id, accepted.run.id);
       await refreshState(currentSession.id);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Could not send goal to Agent Gateway.");
@@ -252,8 +291,8 @@ function HomePage() {
       });
       setPendingActions((current) => current.filter((item) => item.id !== action.id));
       upsertRun(accepted.run);
-      subscribeToRun(session.id, accepted.run.id);
-      await refreshState(session.id);
+      await subscribeToRun(session.id, accepted.run.id);
+      await refreshStateUntilRunSettles(session.id, accepted.run.id);
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : "Could not respond to action.");
     } finally {
@@ -279,7 +318,7 @@ function HomePage() {
         },
       });
       upsertRun(accepted.run);
-      subscribeToRun(session.id, accepted.run.id);
+      await subscribeToRun(session.id, accepted.run.id);
       await refreshState(session.id);
     } catch (lessonError) {
       setError(lessonError instanceof Error ? lessonError.message : "Could not open lesson for this node.");

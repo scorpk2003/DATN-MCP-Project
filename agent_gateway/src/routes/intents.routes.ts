@@ -7,6 +7,7 @@ import { sessionStore } from "../services/sessionStore.js";
 import type { RunProcessor } from "../services/runProcessor.js";
 import { buildAuthContext } from "../services/authContext.js";
 import type { GatewayConfig } from "../config.js";
+import { requireSessionAccess } from "../services/sessionAccess.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { routeParam } from "./params.js";
 
@@ -17,10 +18,7 @@ export function intentsRouter(runProcessor: RunProcessor, config: GatewayConfig)
     "/sessions/:sessionId/intents",
     asyncHandler(async (request, response) => {
       const sessionId = routeParam(request.params.sessionId, "sessionId");
-      const session = sessionStore.getSession(sessionId);
-      if (!session) {
-        throw new GatewayError("SESSION_NOT_FOUND", "Session not found.", 404);
-      }
+      const { session, authContext } = requireSessionAccess(request, config, sessionId);
 
       const input = sendIntentRequestSchema.safeParse(request.body);
       if (!input.success) {
@@ -31,7 +29,6 @@ export function intentsRouter(runProcessor: RunProcessor, config: GatewayConfig)
         throw new GatewayError("SESSION_NOT_FOUND", "Session not found.", 404);
       }
 
-      const authContext = buildAuthContext(request, config, session.userId);
       sessionStore.addUserMessage(sessionId, run.id, intentToUserMessage(input.data.intent));
       eventBus.publish(sessionId, run.id, {
         type: "run.status_changed",

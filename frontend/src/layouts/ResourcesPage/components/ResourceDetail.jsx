@@ -1,5 +1,5 @@
 import { faBookmark } from "@fortawesome/free-regular-svg-icons";
-import { faBookmark as faBookmarkSolid, faArrowRight } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faBookmark as faBookmarkSolid } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Badge, Button, Card, SectionTitle } from "../../../components/ui";
 
@@ -39,7 +39,15 @@ export function ResourceDetail({ resource }) {
           <p className="mt-1 text-sm font-bold text-[var(--text-primary)]">{resource.source}</p>
         </div>
 
-        <Button full>
+        <Button
+          full
+          disabled={!resource.url}
+          onClick={() => {
+            if (resource.url) {
+              window.open(resource.url, "_blank", "noopener,noreferrer");
+            }
+          }}
+        >
           Mở tài liệu
           <FontAwesomeIcon icon={faArrowRight} />
         </Button>

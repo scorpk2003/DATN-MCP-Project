@@ -14,13 +14,18 @@ export type NormalizedOutput =
       message: string;
     };
 
-export function normalizeOrchestratorOutput(output: unknown, goal: string): NormalizedOutput {
+export function normalizeOrchestratorOutput(
+  output: unknown,
+  goal: string,
+  context?: Record<string, unknown>,
+): NormalizedOutput {
   const artifacts = [
     findRoadmapLikeArtifact(output, goal),
-    findLessonLikeArtifact(output),
-    findGradeResultLikeArtifact(output),
-    findResourceReadinessLikeArtifact(output),
-    findBackfillJobLikeArtifact(output),
+    findLessonLikeArtifact(output, context),
+    findGradeResultLikeArtifact(output, context),
+    findResourceReadinessLikeArtifact(output, context),
+    findBackfillJobLikeArtifact(output, context),
+    findEmptyReviewFallbackLessonArtifact(output, context),
   ].filter((artifact): artifact is UIArtifact => Boolean(artifact));
 
   if (artifacts.length > 0) {
@@ -38,13 +43,15 @@ export function normalizeOrchestratorOutput(output: unknown, goal: string): Norm
   };
 }
 
-function findLessonLikeArtifact(value: unknown): UIArtifact | null {
+function findLessonLikeArtifact(value: unknown, context?: Record<string, unknown>): UIArtifact | null {
   const candidate = findObject(
     value,
     (item) =>
       item.kind === "lesson" ||
       isRecord(item.lessonDraft) ||
       isRecord(item.lesson_draft) ||
+      Array.isArray(item.contentBlocks) ||
+      Array.isArray(item.content_blocks) ||
       (typeof item.explanation === "string" && (Array.isArray(item.resources) || Array.isArray(item.sourceReferences))),
     new Set(),
   );
@@ -55,15 +62,39 @@ function findLessonLikeArtifact(value: unknown): UIArtifact | null {
   const draft = recordFrom(candidate.lessonDraft) ?? recordFrom(candidate.lesson_draft) ?? candidate;
   const resources = arrayFrom(draft.resources) ?? arrayFrom(draft.sourceReferences) ?? arrayFrom(draft.source_references) ?? [];
   const exercise = firstRecord(arrayFrom(draft.exercises)) ?? recordFrom(draft.exercise);
+  const id = stringFrom(draft.id) ?? stringFrom(draft.lessonId) ?? stringFrom(candidate.lessonId) ?? makeId("artifact_lesson");
+  const contextSourceId = contextReviewSourceId(context);
+  const roadmapId =
+    stringFrom(draft.roadmapId) ??
+    stringFrom(candidate.roadmapId) ??
+    stringFrom(context?.roadmapId) ??
+    (contextSourceId ? `review_${contextSourceId}` : undefined);
+  const nodeId =
+    stringFrom(draft.nodeId) ??
+    stringFrom(candidate.nodeId) ??
+    stringFrom(draft.roadmapNodeId) ??
+    stringFrom(candidate.roadmapNodeId) ??
+    stringFrom(context?.nodeId) ??
+    stringFrom(context?.roadmapNodeId) ??
+    contextSourceId;
+  if (!roadmapId || !nodeId) {
+    return null;
+  }
+
+  const explanation =
+    stringFrom(draft.explanation) ??
+    stringFrom(draft.content) ??
+    lessonContentBlockSummary(arrayFrom(draft.contentBlocks) ?? arrayFrom(draft.content_blocks)) ??
+    summarizeUnknownOutput(draft);
 
   return {
     kind: "lesson",
-    id: stringFrom(draft.id) ?? stringFrom(draft.lessonId) ?? stringFrom(candidate.lessonId) ?? makeId("artifact_lesson"),
-    roadmapId: stringFrom(draft.roadmapId) ?? stringFrom(candidate.roadmapId) ?? "current_roadmap",
-    nodeId: stringFrom(draft.nodeId) ?? stringFrom(candidate.nodeId) ?? stringFrom(draft.topic) ?? "current_node",
+    id,
+    roadmapId,
+    nodeId,
     title: stringFrom(draft.title) ?? stringFrom(draft.topic) ?? "Generated lesson",
     objective: stringFrom(draft.objective) ?? firstString(arrayFrom(draft.objectives)) ?? "Learn the selected concept.",
-    explanation: stringFrom(draft.explanation) ?? stringFrom(draft.content) ?? summarizeUnknownOutput(draft),
+    explanation,
     resources: resources.slice(0, 10).map((resource, index) => normalizeResourceEvidence(resource, index)),
     exercise: exercise
       ? {
@@ -77,7 +108,52 @@ function findLessonLikeArtifact(value: unknown): UIArtifact | null {
   };
 }
 
-function findGradeResultLikeArtifact(value: unknown): UIArtifact | null {
+function findEmptyReviewFallbackLessonArtifact(value: unknown, context?: Record<string, unknown>): UIArtifact | null {
+  const contextType = stringFrom(context?.type);
+  if (contextType !== "review.task.selected" && contextType !== "note.review.requested") {
+    return null;
+  }
+  if (!isCompletedWithEmptyOutput(value)) {
+    return null;
+  }
+
+  const sourceId = contextReviewSourceId(context);
+  const nodeId = stringFrom(context?.nodeId) ?? stringFrom(context?.roadmapNodeId) ?? sourceId;
+  if (!sourceId || !nodeId) {
+    return null;
+  }
+
+  const concept =
+    stringFrom(context?.concept) ??
+    stringFrom(context?.title) ??
+    stringFrom(context?.course) ??
+    "Review session";
+  const course = stringFrom(context?.course);
+  const confidence = numberFrom(context?.confidence);
+
+  return {
+    kind: "lesson",
+    id: makeId("artifact_review"),
+    roadmapId: stringFrom(context?.roadmapId) ?? `review_${sourceId}`,
+    nodeId,
+    title: `${concept} review`,
+    objective: course ? `Review ${concept} from ${course}.` : `Review ${concept}.`,
+    explanation:
+      "The orchestrator completed the approval gate without returning generated lesson content, so this review shell keeps the session actionable while the review plan is regenerated.",
+    resources: [],
+    exercise: {
+      id: `exercise_${sourceId}`,
+      prompt:
+        typeof confidence === "number" && confidence < 0.5
+          ? `Explain ${concept} from first principles, then list one point you are still unsure about.`
+          : `Summarize ${concept} and write one example from memory.`,
+      difficulty: confidence !== undefined && confidence < 0.5 ? "easy" : "medium",
+    },
+    status: "active",
+  };
+}
+
+function findGradeResultLikeArtifact(value: unknown, context?: Record<string, unknown>): UIArtifact | null {
   const candidate = findObject(
     value,
     (item) =>
@@ -94,10 +170,14 @@ function findGradeResultLikeArtifact(value: unknown): UIArtifact | null {
   const result = recordFrom(candidate.gradeResult) ?? recordFrom(candidate.grade_result) ?? candidate;
   const score = numberFrom(result.score) ?? 0;
   const maxScore = numberFrom(result.maxScore) ?? numberFrom(result.max_score) ?? 100;
+  const lessonId = stringFrom(result.lessonId) ?? stringFrom(result.lesson_id) ?? stringFrom(context?.lessonId);
+  if (!lessonId) {
+    return null;
+  }
   return {
     kind: "grade_result",
     id: stringFrom(result.id) ?? makeId("artifact_grade"),
-    lessonId: stringFrom(result.lessonId) ?? stringFrom(result.lesson_id) ?? "current_lesson",
+    lessonId,
     exerciseId: stringFrom(result.exerciseId) ?? stringFrom(result.exercise_id),
     score,
     maxScore,
@@ -109,7 +189,7 @@ function findGradeResultLikeArtifact(value: unknown): UIArtifact | null {
   };
 }
 
-function findResourceReadinessLikeArtifact(value: unknown): UIArtifact | null {
+function findResourceReadinessLikeArtifact(value: unknown, context?: Record<string, unknown>): UIArtifact | null {
   const candidate = findObject(
     value,
     (item) =>
@@ -126,10 +206,11 @@ function findResourceReadinessLikeArtifact(value: unknown): UIArtifact | null {
 
   const readiness = recordFrom(candidate.resourceReadiness) ?? recordFrom(candidate.coverage) ?? candidate;
   const topicName = stringFrom(readiness.topicName) ?? stringFrom(readiness.topic) ?? stringFrom(readiness.topic_text) ?? "Current topic";
+  const topicId = stringFrom(readiness.topicId) ?? stringFrom(readiness.topic_id) ?? stringFrom(context?.topicId) ?? slugFrom(topicName);
   return {
     kind: "resource_readiness",
     id: stringFrom(readiness.id) ?? makeId("artifact_readiness"),
-    topicId: stringFrom(readiness.topicId) ?? stringFrom(readiness.topic_id) ?? slugFrom(topicName),
+    topicId,
     topicName,
     overallStatus: normalizeReadinessStatus(stringFrom(readiness.overallStatus) ?? stringFrom(readiness.coverageStatus)),
     officialDocsCoverage: clamp01(numberFrom(readiness.officialDocsCoverage) ?? numberFrom(readiness.official_docs_coverage) ?? 0),
@@ -141,7 +222,7 @@ function findResourceReadinessLikeArtifact(value: unknown): UIArtifact | null {
   };
 }
 
-function findBackfillJobLikeArtifact(value: unknown): UIArtifact | null {
+function findBackfillJobLikeArtifact(value: unknown, context?: Record<string, unknown>): UIArtifact | null {
   const candidate = findObject(
     value,
     (item) =>
@@ -157,10 +238,14 @@ function findBackfillJobLikeArtifact(value: unknown): UIArtifact | null {
   }
 
   const job = recordFrom(candidate.backfillJob) ?? recordFrom(candidate.researchTask) ?? recordFrom(candidate.research_task) ?? candidate;
+  const topicId = stringFrom(job.topicId) ?? stringFrom(job.topic_id) ?? stringFrom(job.normalized_query) ?? stringFrom(context?.topicId);
+  if (!topicId) {
+    return null;
+  }
   return {
     kind: "backfill_job",
     id: stringFrom(job.id) ?? stringFrom(job.taskId) ?? stringFrom(job.task_id) ?? makeId("artifact_backfill"),
-    topicId: stringFrom(job.topicId) ?? stringFrom(job.topic_id) ?? stringFrom(job.normalized_query) ?? "current_topic",
+    topicId,
     status: normalizeBackfillStatus(stringFrom(job.status)),
     progress: clamp01(numberFrom(job.progress) ?? 0),
     message: stringFrom(job.message) ?? stringFrom(job.description),
@@ -175,62 +260,73 @@ function findRoadmapLikeArtifact(value: unknown, goal: string): RoadmapArtifact 
   if (!candidate) {
     return null;
   }
+  const roadmapId = stringFrom(candidate.id) ?? stringFrom(candidate.roadmapId) ?? stringFrom(candidate.roadmap_id);
+  if (!roadmapId) {
+    return null;
+  }
 
   const rawNodes = arrayFrom(candidate.nodes) ?? arrayFrom(candidate.phases) ?? arrayFrom(candidate.steps) ?? [];
-  const nodes = rawNodes.slice(0, 40).map((node, index) => {
-    const record = isRecord(node) ? node : {};
-    const id = stringFrom(record.id) ?? stringFrom(record.nodeId) ?? stringFrom(record.node_id) ?? stringFrom(record.slug) ?? `node_${index + 1}`;
-    const title =
-      stringFrom(record.title) ??
-      stringFrom(record.name) ??
-      stringFrom(record.label) ??
-      stringFrom(record.topic) ??
-      `Learning step ${index + 1}`;
+  const nodes = rawNodes
+    .slice(0, 40)
+    .map((node, index) => {
+      const record = isRecord(node) ? node : {};
+      const id = stringFrom(record.id) ?? stringFrom(record.nodeId) ?? stringFrom(record.node_id) ?? stringFrom(record.slug);
+      if (!id) {
+        return null;
+      }
+      const title =
+        stringFrom(record.title) ??
+        stringFrom(record.name) ??
+        stringFrom(record.label) ??
+        stringFrom(record.topic) ??
+        `Learning step ${index + 1}`;
 
-    return {
-      id,
-      title,
-      type: normalizeNodeType(stringFrom(record.type) ?? stringFrom(record.nodeType) ?? stringFrom(record.node_type)),
-      status: normalizeNodeStatus(stringFrom(record.status), index),
-      coverageStatus: normalizeCoverage(stringFrom(record.coverageStatus) ?? stringFrom(record.coverage)),
-      lessonId: stringFrom(record.lessonId) ?? stringFrom(record.lesson_id),
-      position: {
-        x: 120 + (index % 4) * 220,
-        y: 100 + Math.floor(index / 4) * 160,
-      },
-    };
-  });
+      return {
+        id,
+        title,
+        type: normalizeNodeType(stringFrom(record.type) ?? stringFrom(record.nodeType) ?? stringFrom(record.node_type)),
+        status: normalizeNodeStatus(stringFrom(record.status), index),
+        coverageStatus: normalizeCoverage(stringFrom(record.coverageStatus) ?? stringFrom(record.coverage)),
+        lessonId: stringFrom(record.lessonId) ?? stringFrom(record.lesson_id),
+        position: {
+          x: 120 + (index % 4) * 220,
+          y: 100 + Math.floor(index / 4) * 160,
+        },
+      };
+    })
+    .filter((node): node is NonNullable<typeof node> => Boolean(node));
 
   if (nodes.length === 0) {
     return null;
   }
 
   const rawEdges = arrayFrom(candidate.edges);
+  const nodeIds = new Set(nodes.map((node) => node.id));
   const edges = rawEdges
-    ? rawEdges.map((edge, index) => {
-        const record = isRecord(edge) ? edge : {};
-        const source =
-          stringFrom(record.source) ??
-          stringFrom(record.from) ??
-          stringFrom(record.fromNodeId) ??
-          stringFrom(record.from_node_id) ??
-          nodes[index]?.id ??
-          nodes[0]?.id ??
-          "node_1";
-        const target =
-          stringFrom(record.target) ??
-          stringFrom(record.to) ??
-          stringFrom(record.toNodeId) ??
-          stringFrom(record.to_node_id) ??
-          nodes[index + 1]?.id ??
-          source;
-        return {
-          id: stringFrom(record.id) ?? `edge_${source}_${target}_${index + 1}`,
-          source,
-          target,
-          type: normalizeEdgeType(stringFrom(record.type) ?? stringFrom(record.edgeType) ?? stringFrom(record.edge_type)),
-        };
-      })
+    ? rawEdges
+        .map((edge, index) => {
+          const record = isRecord(edge) ? edge : {};
+          const source =
+            stringFrom(record.source) ??
+            stringFrom(record.from) ??
+            stringFrom(record.fromNodeId) ??
+            stringFrom(record.from_node_id);
+          const target =
+            stringFrom(record.target) ??
+            stringFrom(record.to) ??
+            stringFrom(record.toNodeId) ??
+            stringFrom(record.to_node_id);
+          if (!source || !target || !nodeIds.has(source) || !nodeIds.has(target)) {
+            return null;
+          }
+          return {
+            id: stringFrom(record.id) ?? `edge_${source}_${target}_${index + 1}`,
+            source,
+            target,
+            type: normalizeEdgeType(stringFrom(record.type) ?? stringFrom(record.edgeType) ?? stringFrom(record.edge_type)),
+          };
+        })
+        .filter((edge): edge is NonNullable<typeof edge> => Boolean(edge))
     : nodes.slice(1).map((node, index) => ({
         id: `edge_${nodes[index]?.id}_${node.id}`,
         source: nodes[index]?.id ?? nodes[0]?.id ?? node.id,
@@ -240,7 +336,7 @@ function findRoadmapLikeArtifact(value: unknown, goal: string): RoadmapArtifact 
 
   return {
     kind: "roadmap",
-    id: stringFrom(candidate.id) ?? stringFrom(candidate.roadmapId) ?? stringFrom(candidate.roadmap_id) ?? makeId("artifact_roadmap"),
+    id: roadmapId,
     title: stringFrom(candidate.title) ?? "Generated learning roadmap",
     goal: stringFrom(candidate.goal) ?? goal,
     status: "draft",
@@ -337,6 +433,9 @@ function normalizeResourceEvidence(value: unknown, index: number) {
 function normalizeSourceType(value?: string): "official_docs" | "article" | "video" | "exercise" | "project" {
   if (value === "official_docs" || value === "video" || value === "exercise" || value === "project") {
     return value;
+  }
+  if (value === "docs") {
+    return "official_docs";
   }
   return "article";
 }
@@ -452,6 +551,47 @@ function clamp01(value: number) {
 
 function slugFrom(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "current-topic";
+}
+
+function contextReviewSourceId(context?: Record<string, unknown>) {
+  const source = (
+    stringFrom(context?.taskId) ??
+    stringFrom(context?.noteId) ??
+    stringFrom(context?.concept) ??
+    stringFrom(context?.title) ??
+    stringFrom(context?.course)
+  )?.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-|-$/g, "");
+  return source || undefined;
+}
+
+function lessonContentBlockSummary(blocks: unknown[] | null) {
+  const block = blocks?.find(isRecord);
+  if (!block) {
+    return undefined;
+  }
+  return stringFrom(block.content) ?? stringFrom(block.summary) ?? stringFrom(block.title);
+}
+
+function isCompletedWithEmptyOutput(value: unknown) {
+  const record = recordFrom(value);
+  if (!record) {
+    return false;
+  }
+  const status = stringFrom(record.status);
+  if (status !== "completed") {
+    return false;
+  }
+  const output = record.output;
+  if (output === undefined || output === null) {
+    return true;
+  }
+  if (isRecord(output)) {
+    return Object.keys(output).length === 0;
+  }
+  if (Array.isArray(output)) {
+    return output.length === 0;
+  }
+  return false;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -6,7 +6,7 @@ Create one executable binding for the current `PlanStep`.
 
 Binding maps existing `AgentContext` data into tool parameters or reasoning inputs. Binding also declares where the step output should be written after execution.
 
-Do not change the plan. Do not call tools. Do not invent tool outputs.
+Keep the existing plan unchanged. Tool execution and tool outputs are runtime-owned.
 
 For `ToolCall` steps, the runtime provides the selected tool input schema in the user message. The produced params must validate against that schema.
 
@@ -51,17 +51,7 @@ Use `Static` when params are literal values or can be directly assembled from in
 }
 ```
 
-`LlmResolved` is a last resort. Avoid it unless no `Context` or `Static` binding can express the required input. Do not use `LlmResolved` for simple fields such as `goal`, `topic`, `user_id`, `session_id`, `roadmap`, `lesson`, or `auth_context`.
-
-If `LlmResolved` is unavoidable, keep it narrow:
-
-```json
-{
-  "type": "LlmResolved",
-  "instruction": "Fill only the missing tool parameters from the listed context keys.",
-  "context_keys": ["goal", "scratchpad.last_obs"]
-}
-```
+Use only `Context` or `Static` in normal binding responses. If neither shape can produce valid params, use `Static` with the safest minimal object that follows the selected tool schema. The runtime has a separate repair path for validation failures.
 
 ## Valid Output Target Shapes
 
@@ -79,7 +69,7 @@ Use exactly one of these:
 {"type": "FieldAndScratchpad", "field": "roadmap", "scratchpad": "roadmap_result"}
 ```
 
-Do not add any extra field beyond the selected output target shape.
+Use only the fields shown in the selected output target shape.
 
 ## Valid Context Roots
 
@@ -88,6 +78,7 @@ You may read only these root paths:
 - `session_id`
 - `user_id`
 - `auth_context`
+- `intent_context`
 - `goal`
 - `topic`
 - `roadmap`
@@ -106,19 +97,19 @@ scratchpad.debug:step_step 1
 scratchpad.debug:step_step 2
 ```
 
-Do not use any root path outside the list above; unknown roots do not exist in `AgentContext`.
+Only the listed root paths exist in `AgentContext`.
 
 ## Binding Rules
 
 - Match `binding.step_id` to the current plan step id.
 - For `ToolCall`, build only params accepted by the selected tool input schema.
-- Do not wrap params under names such as `params`, `input`, or `arguments` unless the selected tool schema explicitly requires that wrapper.
+- The params object is the direct object described by the selected tool schema.
 - Required schema fields must be present in the final params object.
+- Required identifiers such as `roadmapId`, `roadmapNodeId`, `lessonId`, and `userId` must come from `intent_context`, trusted auth context, or previous observations.
 - Unknown fields should be omitted unless the schema allows them.
 - Prefer copying existing values with `Context`.
 - Use `Static` for literal params and simple objects that are already known.
-- Use `LlmResolved` only for genuinely ambiguous transformations that cannot be represented with `Context` or `Static`.
-- Never create trusted auth data. If a tool requires auth, the Rust runtime injects trusted auth after binding.
+- Trusted auth data is injected by Rust after binding.
 - Keep `expected_schema` as `null` unless a small useful expectation is obvious.
 - If there is no meaningful input for a `Reasoning` or `HumanApproval` step, use `Static` with an empty object or minimal literal object.
 
@@ -187,26 +178,6 @@ Reasoning based on previous observations:
     "output": {
       "type": "Scratchpad",
       "name": "final_reasoning"
-    },
-    "expected_schema": null
-  }
-}
-```
-
-Last-resort LLM filling:
-
-```json
-{
-  "binding": {
-    "step_id": "step 4",
-    "input": {
-      "type": "LlmResolved",
-      "instruction": "Create only the missing search fields from the learner goal and the latest observation.",
-      "context_keys": ["goal", "scratchpad.last_obs"]
-    },
-    "output": {
-      "type": "Scratchpad",
-      "name": "resource_search"
     },
     "expected_schema": null
   }

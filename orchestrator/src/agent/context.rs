@@ -22,6 +22,8 @@ pub struct AgentContext {
     pub session_id: String,
     pub user_id: Option<String>,
     pub auth_context: Option<AuthContext>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intent_context: Option<Value>,
     pub goal: Option<String>,
     pub topic: Option<String>,
     pub roadmap: Option<Value>,
@@ -39,6 +41,7 @@ impl Default for AgentContext {
             session_id: String::new(),
             user_id: None,
             auth_context: None,
+            intent_context: None,
             goal: None,
             topic: None,
             roadmap: None,
@@ -62,6 +65,7 @@ impl AgentContext {
     pub fn write_field(&mut self, field_name: &str, value: &Value) {
         match field_name {
             "goal" => self.goal = value.as_str().map(|s| s.to_string()),
+            "intent_context" => self.intent_context = Some(value.clone()),
             "topic" => self.topic = value.as_str().map(|s| s.to_string()),
             "roadmap" => self.roadmap = Some(value.clone()),
             "skill_graph" => self.skill_graph = Some(value.clone()),

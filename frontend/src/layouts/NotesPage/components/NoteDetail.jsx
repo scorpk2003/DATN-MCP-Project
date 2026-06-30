@@ -2,7 +2,7 @@ import { faThumbtack } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Badge, Button, Card, SectionTitle } from "../../../components/ui";
 
-export function NoteDetail({ note }) {
+export function NoteDetail({ note, onCreateReview, creatingReview = false }) {
   if (!note) {
     return (
       <Card className="p-5">
@@ -40,8 +40,12 @@ export function NoteDetail({ note }) {
         </div>
 
         <div className="grid gap-2 sm:grid-cols-2">
-          <Button variant="secondary">Chỉnh sửa</Button>
-          <Button variant="ghost">Tạo review</Button>
+          <Button variant="secondary" disabled title="Editing saved notes is not available yet">
+            Chỉnh sửa
+          </Button>
+          <Button variant="ghost" loading={creatingReview} onClick={() => onCreateReview?.(note)}>
+            Tạo review
+          </Button>
         </div>
       </Card>
     </aside>

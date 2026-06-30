@@ -24,6 +24,10 @@ type SessionRecord = {
 export class SessionStore {
   private readonly sessions = new Map<string, SessionRecord>();
 
+  clearForTest() {
+    this.sessions.clear();
+  }
+
   createSession(input: { userId?: string; title?: string; metadata?: Record<string, unknown> }) {
     const timestamp = nowIso();
     const session: AgentSession = {
@@ -150,6 +154,14 @@ export class SessionStore {
       pendingActions: [...record.pendingActions.values()].filter((action) => action.status === "pending"),
       timeline: record.timeline,
     };
+  }
+
+  getLatestRoadmapArtifact(input: { userId?: string } = {}) {
+    return [...this.sessions.values()]
+      .filter((record) => !input.userId || record.session.userId === input.userId)
+      .sort((a, b) => b.session.updatedAt.localeCompare(a.session.updatedAt))
+      .flatMap((record) => [...record.artifacts.values()])
+      .filter((artifact) => artifact.kind === "roadmap")[0] ?? null;
   }
 
   addUserMessage(sessionId: string, runId: string, content: string) {

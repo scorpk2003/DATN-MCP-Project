@@ -27,11 +27,11 @@ export function createApp(config: GatewayConfig) {
   });
 
   app.use(dataRouter(config));
-  app.use(sessionsRouter());
+  app.use(sessionsRouter(config));
   app.use(intentsRouter(runProcessor, config));
-  app.use(streamRouter());
+  app.use(streamRouter(config));
   app.use(actionsRouter(runProcessor, config));
-  app.use(runsRouter(runProcessor));
+  app.use(runsRouter(runProcessor, config));
   app.use(errorHandler);
 
   return app;

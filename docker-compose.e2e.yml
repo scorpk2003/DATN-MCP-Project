@@ -1,0 +1,254 @@
+services:
+  frontend:
+    env_file: !override []
+    build:
+      args:
+        VITE_AGENT_GATEWAY_URL: /api/agent-gateway
+        VITE_API_BASE_URL: /api/agent-gateway
+        VITE_ALLOW_DEV_AUTH: "true"
+        VITE_USE_MOCK_API: "false"
+    environment:
+      VITE_AGENT_GATEWAY_URL: /api/agent-gateway
+      VITE_API_BASE_URL: /api/agent-gateway
+      VITE_ALLOW_DEV_AUTH: "true"
+      VITE_USE_MOCK_API: "false"
+    ports: !override
+      - "${E2E_FRONTEND_PORT:-5174}:80"
+    depends_on:
+      agent-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  agent-gateway:
+    env_file: !override []
+    environment:
+      AGENT_GATEWAY_HOST: 0.0.0.0
+      AGENT_GATEWAY_PORT: 4000
+      AGENT_GATEWAY_ALLOW_DEV_AUTH: "true"
+      ORCHESTRATOR_BASE_URL: http://fake-orchestrator:3999
+      ORCHESTRATOR_TIMEOUT_MS: 120000
+      DATABASE_MCP_BASE_URL: http://database-mcp:3101
+      RESOURCE_SERVICE_BASE_URL: http://resource-api:3200
+      CORS_ORIGIN: "*"
+    ports: !override
+      - "${E2E_AGENT_GATEWAY_PORT:-4000}:4000"
+    depends_on:
+      fake-orchestrator:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/health >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  fake-orchestrator:
+    build:
+      context: .
+      dockerfile: docker/agent-gateway.Dockerfile
+    command: ["node", "--import", "tsx", "../tools/fake-orchestrator-flow.mjs"]
+    environment:
+      FAKE_ORCHESTRATOR_ONLY: "true"
+      FAKE_ORCHESTRATOR_HOST: 0.0.0.0
+      FAKE_ORCHESTRATOR_PORT: 3999
+    expose:
+      - "3999"
+    networks:
+      - datn-network
+
+  orchestrator:
+    env_file: !override []
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ORCHESTRATOR_HOST: 0.0.0.0
+      ORCHESTRATOR_PORT: 3000
+      ORCHESTRATOR_MCP_SERVERS: ${ORCHESTRATOR_MCP_SERVERS:-database,resource,roadmap,lesson}
+      ORCHESTRATOR_OPTIONAL_MCP_SERVERS: ${ORCHESTRATOR_OPTIONAL_MCP_SERVERS:-}
+      ORCHESTRATOR_MCP_READINESS_TIMEOUT_MS: ${ORCHESTRATOR_MCP_READINESS_TIMEOUT_MS:-30000}
+      MCP_CONNECT_TIMEOUT_MS: ${MCP_CONNECT_TIMEOUT_MS:-5000}
+      MCP_LIST_TOOLS_TIMEOUT_MS: ${MCP_LIST_TOOLS_TIMEOUT_MS:-5000}
+      MCP_CALL_TOOL_TIMEOUT_MS: ${MCP_CALL_TOOL_TIMEOUT_MS:-30000}
+      MCP_CALL_RETRIES: ${MCP_CALL_RETRIES:-1}
+      MCP_RETRY_BACKOFF_MS: ${MCP_RETRY_BACKOFF_MS:-150}
+      AGENT_MODEL: ${AGENT_MODEL:-openai/gpt-4o-mini}
+      AGENT_MAX_STEPS: ${AGENT_MAX_STEPS:-8}
+      AGENT_MAX_REPLANS: ${AGENT_MAX_REPLANS:-2}
+      AGENT_MAX_PARAM_REPAIRS: ${AGENT_MAX_PARAM_REPAIRS:-1}
+      SERVER_DATABASE_HOST: database-mcp
+      SERVER_DATABASE_PORT: 3101
+      SERVER_ROADMAP_HOST: roadmap-mcp
+      SERVER_ROADMAP_PORT: 3102
+      SERVER_LESSON_HOST: lesson-mcp
+      SERVER_LESSON_PORT: 3400
+      SERVER_RESOURCE_HOST: resource-mcp
+      SERVER_RESOURCE_PORT: 3300
+    depends_on:
+      database-mcp:
+        condition: service_started
+      roadmap-mcp:
+        condition: service_started
+      lesson-mcp:
+        condition: service_started
+      resource-mcp:
+        condition: service_started
+
+  app-postgres:
+    image: postgres:16-alpine
+    profiles: !override []
+    environment:
+      POSTGRES_DB: ${E2E_DB_NAME:-datn_e2e}
+      POSTGRES_USER: ${E2E_DB_USER:-datn}
+      POSTGRES_PASSWORD: ${E2E_DB_PASS:-datn}
+    ports:
+      - "${E2E_DB_PORT:-55432}:5432"
+    volumes:
+      - app-postgres-e2e-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks:
+      - datn-network
+
+  database-mcp:
+    env_file: !override []
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      MCP_ALLOWED_HOSTS: localhost,127.0.0.1,::1,database-mcp,roadmap-mcp,resource-mcp,lesson-mcp
+      SERVER_DATABASE_HOST: 0.0.0.0
+      SERVER_DATABASE_PORT: 3101
+      DB_HOST: app-postgres
+      DB_PORT: 5432
+      DB_NAME: ${E2E_DB_NAME:-datn_e2e}
+      DB_USER: ${E2E_DB_USER:-datn}
+      DB_PASS: ${E2E_DB_PASS:-datn}
+      DB_SSL_MODE: disable
+      E2E_ENABLE_TEST_ROUTES: "true"
+    depends_on:
+      app-postgres:
+        condition: service_healthy
+
+  roadmap-mcp:
+    env_file: !override []
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      MCP_ALLOWED_HOSTS: localhost,127.0.0.1,::1,database-mcp,roadmap-mcp,resource-mcp,lesson-mcp
+      ROADMAP_MCP_HOST: 0.0.0.0
+      ROADMAP_MCP_PORT: 3102
+      RESOURCE_MCP_URL: http://resource-mcp:3300/mcp
+      RESOURCE_SERVICE_URL: http://resource-api:3200
+      RESOURCE_SERVICE_BASE_URL: http://resource-api:3200
+    depends_on:
+      resource-api:
+        condition: service_started
+      resource-mcp:
+        condition: service_started
+
+  lesson-mcp:
+    env_file: !override []
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      MCP_ALLOWED_HOSTS: localhost,127.0.0.1,::1,database-mcp,roadmap-mcp,resource-mcp,lesson-mcp
+      LESSON_MCP_HOST: 0.0.0.0
+      LESSON_MCP_PORT: 3400
+      RESOURCE_MCP_URL: http://resource-mcp:3300/mcp
+      DATABASE_MCP_URL: http://database-mcp:3101/mcp
+    depends_on:
+      database-mcp:
+        condition: service_started
+      resource-mcp:
+        condition: service_started
+
+  resource-mcp:
+    env_file: !override []
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      MCP_ALLOWED_HOSTS: localhost,127.0.0.1,::1,database-mcp,roadmap-mcp,resource-mcp,lesson-mcp
+      SERVER_RESOURCE_MCP_HOST: 0.0.0.0
+      SERVER_RESOURCE_MCP_PORT: 3300
+      RESOURCE_SERVICE_BASE_URL: http://resource-api:3200
+    depends_on:
+      resource-api:
+        condition: service_started
+
+  resource-postgres:
+    image: pgvector/pgvector:pg18
+    environment:
+      POSTGRES_DB: ${E2E_RESOURCE_DB:-postgres}
+      POSTGRES_USER: ${E2E_RESOURCE_USER:-postgres}
+      POSTGRES_PASSWORD: ${E2E_RESOURCE_PASS:-1234}
+    ports:
+      - "${E2E_RESOURCE_POSTGRES_PORT:-55435}:5432"
+    volumes:
+      - resource-postgres-e2e-data:/var/lib/postgresql
+      - ./resource_service_postgres.sql:/docker-entrypoint-initdb.d/001-resource-service.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks:
+      - datn-network
+
+  resource-api:
+    build:
+      context: .
+      dockerfile: docker/resource-service.Dockerfile
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      RESOURCE_SERVICE_API_HOST: 0.0.0.0
+      RESOURCE_SERVICE_API_PORT: 3200
+      RESOURCE_SERVICE_HOST: resource-postgres
+      RESOURCE_SERVICE_PORT: 5432
+      RESOURCE_DB: ${E2E_RESOURCE_DB:-postgres}
+      RESOURCE_USER: ${E2E_RESOURCE_USER:-postgres}
+      RESOURCE_PASS: ${E2E_RESOURCE_PASS:-1234}
+      RESOURCE_SERVICE_BASE_URL: http://resource-api:3200
+      RESOURCE_SERVICE_URL: http://resource-api:3200
+    command: ["/usr/local/bin/resource_service"]
+    ports:
+      - "${E2E_RESOURCE_API_PORT:-3200}:3200"
+    depends_on:
+      resource-postgres:
+        condition: service_healthy
+    networks:
+      - datn-network
+
+  resource-worker:
+    build:
+      context: .
+      dockerfile: docker/resource-service.Dockerfile
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      RESOURCE_SERVICE_HOST: resource-postgres
+      RESOURCE_SERVICE_PORT: 5432
+      RESOURCE_DB: ${E2E_RESOURCE_DB:-postgres}
+      RESOURCE_USER: ${E2E_RESOURCE_USER:-postgres}
+      RESOURCE_PASS: ${E2E_RESOURCE_PASS:-1234}
+      RESOURCE_SERVICE_BASE_URL: http://resource-api:3200
+      RESOURCE_SERVICE_URL: http://resource-api:3200
+    command: ["/usr/local/bin/resource_worker"]
+    depends_on:
+      resource-postgres:
+        condition: service_healthy
+      resource-api:
+        condition: service_started
+    networks:
+      - datn-network
+
+volumes:
+  app-postgres-e2e-data:
+  resource-postgres-e2e-data:
+
+networks:
+  datn-network:
+    name: ${DATN_NETWORK_NAME:-datn-e2e-network}
+    external: false

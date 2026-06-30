@@ -2,7 +2,7 @@ import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Badge, Button, Card, ProgressBar } from "../../../components/ui";
 
-export function ReviewCard({ item }) {
+export function ReviewCard({ item, onStartReview, starting = false, disabled = false }) {
   return (
     <Card interactive className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
@@ -12,14 +12,8 @@ export function ReviewCard({ item }) {
         </div>
         <Badge tone={item.tone}>{item.due}</Badge>
       </div>
-      <ProgressBar
-        value={item.confidence}
-        max={1}
-        tone={item.tone}
-        label="Mức tự tin"
-        showLabel
-      />
-      <Button variant="secondary" full>
+      <ProgressBar value={item.confidence} max={1} tone={item.tone} label="Mức tự tin" showLabel />
+      <Button variant="secondary" full loading={starting} disabled={disabled} onClick={() => onStartReview?.(item)}>
         Bắt đầu ôn
         <FontAwesomeIcon icon={faArrowRight} />
       </Button>

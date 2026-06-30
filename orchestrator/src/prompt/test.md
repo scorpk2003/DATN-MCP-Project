@@ -2,7 +2,7 @@
 
 This file is appended only when `AGENT_TESTING=true`.
 
-The production planning and binding contracts still apply. Do not override the schemas, phase separation rules, or JSON output requirements from `plan.md` and `resolver.md`.
+The production planning and binding contracts still apply. Keep the schemas, phase separation rules, and JSON output requirements from `plan.md` and `resolver.md`.
 
 ## Testing Scope
 
@@ -16,12 +16,10 @@ If the prompt does not start with `Testing:`, ignore this overlay.
 
 ## Testing Rules
 
-- Keep using exact server and tool names from the active tool catalog.
-- Do not invent mock server names unless the active catalog itself contains them.
-- Do not use human-readable server labels. Use exact runtime names from the catalog.
-- Do not add params to `PlanStep`.
-- Reasoning action objects must have only the `type` field; put all instructions in `step_goal`.
-- Binding objects must use only the exact enum shapes from the production binding contract.
+- Use exact server and tool names from the active tool catalog.
+- Plan steps use the same production `PlanStep` schema.
+- Reasoning action objects have only the `type` field; put all instructions in `step_goal`.
+- Binding objects use the exact production binding enum shapes.
 - Prefer tiny deterministic plans that are easy for unit and integration tests to inspect.
 
 ## Valid Testing Plan Shape

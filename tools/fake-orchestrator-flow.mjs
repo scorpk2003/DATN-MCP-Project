@@ -48,6 +48,28 @@ const fakeOrchestrator = http.createServer(async (request, response) => {
     return;
   }
 
+  if (request.url === "/agent/run" && body.goal?.includes("Start a spaced-review session")) {
+    response.statusCode = 202;
+    response.end(
+      JSON.stringify({
+        ok: true,
+        session_id: body.session_id,
+        status: "waiting_for_user",
+        output: {
+          ok: true,
+          status: "waiting_for_user",
+          session_id: body.session_id,
+          approval: {
+            step_id: "approve_review_lesson",
+            question: "Review the focused spaced-review lesson before starting.",
+            options: ["approve", "reject", "revise"],
+          },
+        },
+      }),
+    );
+    return;
+  }
+
   if (request.url === "/agent/run") {
     response.statusCode = 202;
     response.end(
@@ -71,6 +93,30 @@ const fakeOrchestrator = http.createServer(async (request, response) => {
   }
 
   if (request.url === "/agent/resume") {
+    if (body.approval?.step_id === "approve_review_lesson") {
+      response.statusCode = 202;
+      response.end(
+        JSON.stringify({
+          ok: true,
+          session_id: body.session_id,
+          status: body.approval?.decision === "reject" ? "rejected" : "completed",
+          output:
+            body.approval?.decision === "reject"
+              ? {
+                  ok: true,
+                  status: "rejected",
+                  message: "The learner rejected the review lesson.",
+                }
+              : {
+                  ok: true,
+                  status: "completed",
+                  output: {},
+                },
+        }),
+      );
+      return;
+    }
+
     response.statusCode = 202;
     response.end(
       JSON.stringify({
@@ -160,23 +206,30 @@ const fakeOrchestrator = http.createServer(async (request, response) => {
   response.end(JSON.stringify({ ok: false, error: { message: "Not found" } }));
 });
 
-fakeOrchestrator.listen(3999, "127.0.0.1", () => {
-  console.log("fake orchestrator listening on http://127.0.0.1:3999");
+const fakeOrchestratorHost = process.env.FAKE_ORCHESTRATOR_HOST || "127.0.0.1";
+const fakeOrchestratorPort = Number(process.env.FAKE_ORCHESTRATOR_PORT || 3999);
+const gatewayHost = process.env.AGENT_GATEWAY_HOST || "127.0.0.1";
+const gatewayPort = Number(process.env.AGENT_GATEWAY_PORT || 4000);
+
+fakeOrchestrator.listen(fakeOrchestratorPort, fakeOrchestratorHost, () => {
+  console.log(`fake orchestrator listening on http://${fakeOrchestratorHost}:${fakeOrchestratorPort}`);
 });
 
-const gateway = createApp({
-  host: "127.0.0.1",
-  port: 4000,
-  orchestratorBaseUrl: "http://127.0.0.1:3999",
-  orchestratorTimeoutMs: 10000,
-  corsOrigin: "*",
-  resourceServiceBaseUrl: "http://127.0.0.1:3200",
-  allowDevAuthContext: true,
-});
+if (process.env.FAKE_ORCHESTRATOR_ONLY !== "true") {
+  const gateway = createApp({
+    host: gatewayHost,
+    port: gatewayPort,
+    orchestratorBaseUrl: `http://127.0.0.1:${fakeOrchestratorPort}`,
+    orchestratorTimeoutMs: 10000,
+    corsOrigin: "*",
+    resourceServiceBaseUrl: "http://127.0.0.1:3200",
+    allowDevAuthContext: true,
+  });
 
-gateway.listen(4000, "127.0.0.1", () => {
-  console.log("agent gateway listening on http://127.0.0.1:4000");
-});
+  gateway.listen(gatewayPort, gatewayHost, () => {
+    console.log(`agent gateway listening on http://${gatewayHost}:${gatewayPort}`);
+  });
+}
 
 async function readJson(request) {
   const chunks = [];

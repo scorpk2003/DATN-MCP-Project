@@ -1,7 +1,12 @@
-use std::sync::Arc;
+use std::{env, sync::Arc};
 
 use anyhow::Result;
-use axum::Router;
+use axum::{
+    Json, Router,
+    extract::{Query, State},
+    http::StatusCode,
+    routing::{get, post},
+};
 use rmcp::{
     ErrorData, ServerHandler,
     handler::server::{tool::ToolRouter, wrapper::Parameters},
@@ -14,7 +19,8 @@ use rmcp::{
         streamable_http_server::session::local::LocalSessionManager,
     },
 };
-use serde_json::Value;
+use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
 use tokio::{net::TcpListener, sync::Mutex};
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
@@ -29,6 +35,63 @@ use crate::{
         ResourceTool, RoadmapTool, SearchTool, TaskTool, UserTool,
     },
 };
+
+#[derive(Debug, Deserialize)]
+struct LatestRoadmapQuery {
+    #[serde(rename = "userId")]
+    user_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct UserDataQuery {
+    #[serde(rename = "userId")]
+    user_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CreateNoteRequest {
+    #[serde(rename = "userId")]
+    user_id: String,
+    content: String,
+    #[serde(rename = "taskId")]
+    task_id: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct LatestRoadmapResponse {
+    roadmap: Option<Value>,
+}
+
+#[derive(Debug, Serialize)]
+struct NotesResponse {
+    notes: Vec<Value>,
+}
+
+#[derive(Debug, Serialize)]
+struct ReviewResponse {
+    #[serde(rename = "reviewItems")]
+    review_items: Vec<Value>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SeedRoadmapRequest {
+    #[serde(rename = "userId")]
+    user_id: String,
+    title: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct SeedLearningDataRequest {
+    #[serde(rename = "userId")]
+    user_id: String,
+    title: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ResetTestDataRequest {
+    #[serde(rename = "userId")]
+    user_id: Option<String>,
+}
 
 #[derive(Debug, Clone)]
 pub struct DbServer {
@@ -79,13 +142,23 @@ impl DbServer {
         let config = StreamableHttpServerConfig::default()
             .with_allowed_hosts(allowed_mcp_hosts())
             .with_cancellation_token(CancellationToken::new());
+        let mcp_server = self.clone();
+        let rest_server = self.clone();
         let service = StreamableHttpService::new(
-            move || Ok(self.clone()),
+            move || Ok(mcp_server.clone()),
             Arc::new(LocalSessionManager::default()),
             config,
         );
 
-        let app = Router::new().nest_service("/mcp", service);
+        let app = Router::new()
+            .route("/roadmaps/latest", get(latest_roadmap_handler))
+            .route("/notes", get(notes_handler).post(create_note_handler))
+            .route("/review", get(review_handler))
+            .route("/test/roadmaps/seed", post(seed_roadmap_handler))
+            .route("/test/learning-data/seed", post(seed_learning_data_handler))
+            .route("/test/reset", post(reset_test_data_handler))
+            .with_state(rest_server)
+            .nest_service("/mcp", service);
 
         let listener = TcpListener::bind(&addr).await?;
 
@@ -890,6 +963,964 @@ fn allowed_mcp_hosts() -> Vec<String> {
         .filter(|host| !host.is_empty())
         .map(ToString::to_string)
         .collect()
+}
+
+async fn latest_roadmap_handler(
+    State(server): State<DbServer>,
+    Query(query): Query<LatestRoadmapQuery>,
+) -> Result<Json<LatestRoadmapResponse>, (StatusCode, Json<Value>)> {
+    match load_latest_roadmap(&server, query.user_id).await {
+        Ok(roadmap) => Ok(Json(LatestRoadmapResponse { roadmap })),
+        Err(err) => {
+            error!("Load latest roadmap failed: {err:?}");
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": {
+                        "code": "LATEST_ROADMAP_FAILED",
+                        "message": err.to_string()
+                    }
+                })),
+            ))
+        }
+    }
+}
+
+async fn notes_handler(
+    State(server): State<DbServer>,
+    Query(query): Query<UserDataQuery>,
+) -> Result<Json<NotesResponse>, (StatusCode, Json<Value>)> {
+    match load_notes(&server, query.user_id).await {
+        Ok(notes) => Ok(Json(NotesResponse { notes })),
+        Err(err) => {
+            error!("Load notes failed: {err:?}");
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": {
+                        "code": "NOTES_FAILED",
+                        "message": err.to_string()
+                    }
+                })),
+            ))
+        }
+    }
+}
+
+async fn create_note_handler(
+    State(server): State<DbServer>,
+    Json(payload): Json<CreateNoteRequest>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    match create_note(&server, payload).await {
+        Ok(note) => Ok(Json(json!({ "note": note }))),
+        Err(err) => {
+            error!("Create note failed: {err:?}");
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": {
+                        "code": "CREATE_NOTE_FAILED",
+                        "message": err.to_string()
+                    }
+                })),
+            ))
+        }
+    }
+}
+
+async fn review_handler(
+    State(server): State<DbServer>,
+    Query(query): Query<UserDataQuery>,
+) -> Result<Json<ReviewResponse>, (StatusCode, Json<Value>)> {
+    match load_review_items(&server, query.user_id).await {
+        Ok(review_items) => Ok(Json(ReviewResponse { review_items })),
+        Err(err) => {
+            error!("Load review failed: {err:?}");
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": {
+                        "code": "REVIEW_FAILED",
+                        "message": err.to_string()
+                    }
+                })),
+            ))
+        }
+    }
+}
+
+async fn seed_roadmap_handler(
+    State(server): State<DbServer>,
+    Json(payload): Json<SeedRoadmapRequest>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    if env::var("E2E_ENABLE_TEST_ROUTES").unwrap_or_default() != "true" {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(json!({
+                "error": {
+                    "code": "NOT_FOUND",
+                    "message": "not found"
+                }
+            })),
+        ));
+    }
+
+    match seed_test_roadmap(&server, payload).await {
+        Ok(value) => Ok(Json(value)),
+        Err(err) => {
+            error!("Seed test roadmap failed: {err:?}");
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": {
+                        "code": "SEED_ROADMAP_FAILED",
+                        "message": err.to_string()
+                    }
+                })),
+            ))
+        }
+    }
+}
+
+async fn seed_learning_data_handler(
+    State(server): State<DbServer>,
+    Json(payload): Json<SeedLearningDataRequest>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    if env::var("E2E_ENABLE_TEST_ROUTES").unwrap_or_default() != "true" {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(json!({
+                "error": {
+                    "code": "NOT_FOUND",
+                    "message": "not found"
+                }
+            })),
+        ));
+    }
+
+    match seed_test_learning_data(&server, payload).await {
+        Ok(value) => Ok(Json(value)),
+        Err(err) => {
+            error!("Seed test learning data failed: {err:?}");
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": {
+                        "code": "SEED_LEARNING_DATA_FAILED",
+                        "message": err.to_string()
+                    }
+                })),
+            ))
+        }
+    }
+}
+
+async fn reset_test_data_handler(
+    State(server): State<DbServer>,
+    Json(payload): Json<ResetTestDataRequest>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    if env::var("E2E_ENABLE_TEST_ROUTES").unwrap_or_default() != "true" {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(json!({
+                "error": {
+                    "code": "NOT_FOUND",
+                    "message": "not found"
+                }
+            })),
+        ));
+    }
+
+    match reset_test_data(&server, payload).await {
+        Ok(value) => Ok(Json(value)),
+        Err(err) => {
+            error!("Reset test data failed: {err:?}");
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": {
+                        "code": "RESET_TEST_DATA_FAILED",
+                        "message": err.to_string()
+                    }
+                })),
+            ))
+        }
+    }
+}
+
+async fn load_latest_roadmap(
+    server: &DbServer,
+    user_id: Option<String>,
+) -> anyhow::Result<Option<Value>> {
+    let mut provider = server.provider.lock().await;
+    let conn = provider.get_connections().await?;
+    let user_filter = user_id.filter(|value| !value.trim().is_empty());
+
+    if !all_tables_exist(&conn, &["roadmaps", "projects", "users"]).await? {
+        warn!("Latest roadmap read skipped because required tables do not exist");
+        return Ok(None);
+    }
+
+    let roadmap_row = conn
+        .query_opt(
+            "SELECT
+                r.id,
+                r.project_id,
+                r.version,
+                r.title,
+                r.generated_by,
+                r.created_at::text,
+                p.title AS project_title,
+                p.description AS project_description
+             FROM roadmaps r
+             JOIN projects p ON p.id = r.project_id
+             JOIN users u ON u.id = p.user_id
+             WHERE ($1::text IS NULL OR u.firebase_uid = $1 OR p.user_id::text = $1)
+             ORDER BY r.created_at DESC
+             LIMIT 1",
+            &[&user_filter],
+        )
+        .await?;
+
+    let Some(roadmap_row) = roadmap_row else {
+        return Ok(None);
+    };
+
+    let roadmap_id: uuid::Uuid = roadmap_row.get("id");
+    let phase_rows = conn
+        .query(
+            "SELECT id, roadmap_id, phase_order, title, description, estimated_days
+             FROM roadmap_phases
+             WHERE roadmap_id = $1
+             ORDER BY phase_order ASC",
+            &[&roadmap_id],
+        )
+        .await?;
+
+    let mut phases = Vec::new();
+    for phase_row in phase_rows {
+        let phase_id: uuid::Uuid = phase_row.get("id");
+        let milestone_rows = conn
+            .query(
+                "SELECT id, phase_id, milestone_order, title, description
+                 FROM milestones
+                 WHERE phase_id = $1
+                 ORDER BY milestone_order ASC",
+                &[&phase_id],
+            )
+            .await?;
+
+        let mut milestones = Vec::new();
+        for milestone_row in milestone_rows {
+            let milestone_id: uuid::Uuid = milestone_row.get("id");
+            let task_rows = conn
+                .query(
+                    "SELECT id, milestone_id, task_order, title, description, estimated_hours, difficulty, status
+                     FROM tasks
+                     WHERE milestone_id = $1
+                     ORDER BY task_order ASC",
+                    &[&milestone_id],
+                )
+                .await?;
+
+            milestones.push(json!({
+                "id": milestone_id.to_string(),
+                "phase_id": phase_id.to_string(),
+                "milestone_order": milestone_row.get::<_, i32>("milestone_order"),
+                "title": milestone_row.get::<_, String>("title"),
+                "description": milestone_row.get::<_, Option<String>>("description"),
+                "tasks": task_rows.into_iter().map(|task_row| {
+                    let task_id: uuid::Uuid = task_row.get("id");
+                    json!({
+                        "id": task_id.to_string(),
+                        "milestone_id": milestone_id.to_string(),
+                        "task_order": task_row.get::<_, i32>("task_order"),
+                        "title": task_row.get::<_, String>("title"),
+                        "description": task_row.get::<_, Option<String>>("description"),
+                        "estimated_hours": task_row.get::<_, Option<i32>>("estimated_hours"),
+                        "difficulty": task_row.get::<_, Option<String>>("difficulty"),
+                        "status": task_row.get::<_, Option<String>>("status"),
+                    })
+                }).collect::<Vec<Value>>(),
+            }));
+        }
+
+        phases.push(json!({
+            "id": phase_id.to_string(),
+            "roadmap_id": roadmap_id.to_string(),
+            "phase_order": phase_row.get::<_, i32>("phase_order"),
+            "title": phase_row.get::<_, String>("title"),
+            "description": phase_row.get::<_, Option<String>>("description"),
+            "estimated_days": phase_row.get::<_, Option<i32>>("estimated_days"),
+            "milestones": milestones,
+        }));
+    }
+
+    Ok(Some(json!({
+        "id": roadmap_id.to_string(),
+        "project_id": roadmap_row.get::<_, uuid::Uuid>("project_id").to_string(),
+        "version": roadmap_row.get::<_, i32>("version"),
+        "title": roadmap_row.get::<_, Option<String>>("title"),
+        "generated_by": roadmap_row.get::<_, Option<String>>("generated_by"),
+        "created_at": roadmap_row.get::<_, Option<String>>("created_at"),
+        "project_title": roadmap_row.get::<_, String>("project_title"),
+        "project_description": roadmap_row.get::<_, Option<String>>("project_description"),
+        "phases": phases,
+    })))
+}
+
+async fn load_notes(server: &DbServer, user_id: Option<String>) -> anyhow::Result<Vec<Value>> {
+    let mut provider = server.provider.lock().await;
+    let conn = provider.get_connections().await?;
+    let user_filter = user_id.filter(|value| !value.trim().is_empty());
+
+    if !all_tables_exist(&conn, &["notes", "users"]).await? {
+        warn!("Notes read skipped because required tables do not exist");
+        return Ok(Vec::new());
+    }
+
+    let has_task_context = all_tables_exist(
+        &conn,
+        &[
+            "tasks",
+            "milestones",
+            "roadmap_phases",
+            "roadmaps",
+            "projects",
+        ],
+    )
+    .await?;
+
+    let rows = if has_task_context {
+        conn.query(
+            "SELECT
+                n.id,
+                n.user_id,
+                n.task_id,
+                n.content,
+                n.created_at::text,
+                t.title AS task_title,
+                p.title AS project_title
+             FROM notes n
+             JOIN users u ON u.id = n.user_id
+             LEFT JOIN tasks t ON t.id = n.task_id
+             LEFT JOIN milestones m ON m.id = t.milestone_id
+             LEFT JOIN roadmap_phases ph ON ph.id = m.phase_id
+             LEFT JOIN roadmaps r ON r.id = ph.roadmap_id
+             LEFT JOIN projects p ON p.id = r.project_id
+             WHERE ($1::text IS NULL OR u.firebase_uid = $1 OR n.user_id::text = $1)
+             ORDER BY n.created_at DESC
+             LIMIT 100",
+            &[&user_filter],
+        )
+        .await?
+    } else {
+        conn.query(
+            "SELECT
+                n.id,
+                n.user_id,
+                n.task_id,
+                n.content,
+                n.created_at::text,
+                NULL::text AS task_title,
+                NULL::text AS project_title
+             FROM notes n
+             JOIN users u ON u.id = n.user_id
+             WHERE ($1::text IS NULL OR u.firebase_uid = $1 OR n.user_id::text = $1)
+             ORDER BY n.created_at DESC
+             LIMIT 100",
+            &[&user_filter],
+        )
+        .await?
+    };
+
+    Ok(rows
+        .into_iter()
+        .map(|row| {
+            let note_id: uuid::Uuid = row.get("id");
+            let owner_id: uuid::Uuid = row.get("user_id");
+            let task_id = row.get::<_, Option<uuid::Uuid>>("task_id");
+            json!({
+                "id": note_id.to_string(),
+                "user_id": owner_id.to_string(),
+                "task_id": task_id.map(|value| value.to_string()),
+                "content": row.get::<_, String>("content"),
+                "created_at": row.get::<_, Option<String>>("created_at"),
+                "task_title": row.get::<_, Option<String>>("task_title"),
+                "project_title": row.get::<_, Option<String>>("project_title"),
+            })
+        })
+        .collect())
+}
+
+async fn create_note(server: &DbServer, payload: CreateNoteRequest) -> anyhow::Result<Value> {
+    let user_id = payload.user_id.trim().to_string();
+    let content = payload.content.trim().to_string();
+    if user_id.is_empty() {
+        anyhow::bail!("userId is required");
+    }
+    if content.is_empty() {
+        anyhow::bail!("content is required");
+    }
+
+    let task_id = match payload
+        .task_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        Some(value) => Some(uuid::Uuid::parse_str(value)?),
+        None => None,
+    };
+
+    let mut provider = server.provider.lock().await;
+    let conn = provider.get_connections().await?;
+    ensure_note_tables(&conn).await?;
+
+    let row = conn
+        .query_one(
+            "WITH u AS (
+                INSERT INTO users(firebase_uid, display_name, email)
+                VALUES ($1, NULL, NULL)
+                ON CONFLICT (firebase_uid)
+                DO UPDATE SET updated_at = now()
+                RETURNING id
+             )
+             INSERT INTO notes(user_id, task_id, content)
+             SELECT id, $2, $3 FROM u
+             RETURNING id, user_id, task_id, content, created_at::text",
+            &[&user_id, &task_id, &content],
+        )
+        .await?;
+
+    let note_id: uuid::Uuid = row.get("id");
+    let owner_id: uuid::Uuid = row.get("user_id");
+    let task_id = row.get::<_, Option<uuid::Uuid>>("task_id");
+    Ok(json!({
+        "id": note_id.to_string(),
+        "user_id": owner_id.to_string(),
+        "task_id": task_id.map(|value| value.to_string()),
+        "content": row.get::<_, String>("content"),
+        "created_at": row.get::<_, Option<String>>("created_at"),
+        "task_title": Value::Null,
+        "project_title": Value::Null,
+    }))
+}
+
+async fn load_review_items(
+    server: &DbServer,
+    user_id: Option<String>,
+) -> anyhow::Result<Vec<Value>> {
+    let mut provider = server.provider.lock().await;
+    let conn = provider.get_connections().await?;
+    let user_filter = user_id.filter(|value| !value.trim().is_empty());
+
+    if !all_tables_exist(
+        &conn,
+        &[
+            "tasks",
+            "milestones",
+            "roadmap_phases",
+            "roadmaps",
+            "projects",
+            "users",
+            "task_progress",
+        ],
+    )
+    .await?
+    {
+        warn!("Review read skipped because required tables do not exist");
+        return Ok(Vec::new());
+    }
+
+    let rows = conn
+        .query(
+            "SELECT
+                t.id,
+                t.title,
+                t.description,
+                t.difficulty,
+                p.title AS project_title,
+                COALESCE(tp.status, t.status, 'pending') AS review_status,
+                COALESCE(tp.progress_percent, 0) AS progress_percent,
+                tp.started_at::text,
+                tp.completed_at::text
+             FROM projects p
+             JOIN users u ON u.id = p.user_id
+             JOIN roadmaps r ON r.project_id = p.id
+             JOIN roadmap_phases ph ON ph.roadmap_id = r.id
+             JOIN milestones m ON m.phase_id = ph.id
+             JOIN tasks t ON t.milestone_id = m.id
+             LEFT JOIN task_progress tp ON tp.task_id = t.id AND tp.user_id = u.id
+             WHERE ($1::text IS NULL OR u.firebase_uid = $1 OR u.id::text = $1)
+               AND COALESCE(tp.status, t.status, 'pending') <> 'completed'
+             ORDER BY
+                CASE COALESCE(tp.status, t.status, 'pending')
+                    WHEN 'needs_review' THEN 0
+                    WHEN 'in_progress' THEN 1
+                    ELSE 2
+                END,
+                tp.started_at ASC NULLS FIRST,
+                t.task_order ASC
+             LIMIT 50",
+            &[&user_filter],
+        )
+        .await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| {
+            let task_id: uuid::Uuid = row.get("id");
+            json!({
+                "id": task_id.to_string(),
+                "task_id": task_id.to_string(),
+                "title": row.get::<_, String>("title"),
+                "description": row.get::<_, Option<String>>("description"),
+                "difficulty": row.get::<_, Option<String>>("difficulty"),
+                "project_title": row.get::<_, String>("project_title"),
+                "status": row.get::<_, String>("review_status"),
+                "progress_percent": row.get::<_, i32>("progress_percent"),
+                "started_at": row.get::<_, Option<String>>("started_at"),
+                "completed_at": row.get::<_, Option<String>>("completed_at"),
+            })
+        })
+        .collect())
+}
+
+async fn all_tables_exist(
+    conn: &deadpool_postgres::Object,
+    table_names: &[&str],
+) -> anyhow::Result<bool> {
+    for table_name in table_names {
+        let exists = conn
+            .query_one(
+                "SELECT to_regclass($1) IS NOT NULL AS exists",
+                &[table_name],
+            )
+            .await?
+            .get::<_, bool>("exists");
+        if !exists {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+async fn table_exists(conn: &deadpool_postgres::Object, table_name: &str) -> anyhow::Result<bool> {
+    Ok(conn
+        .query_one(
+            "SELECT to_regclass($1) IS NOT NULL AS exists",
+            &[&table_name],
+        )
+        .await?
+        .get::<_, bool>("exists"))
+}
+
+async fn ensure_note_tables(conn: &deadpool_postgres::Object) -> anyhow::Result<()> {
+    conn.batch_execute(
+        "CREATE EXTENSION IF NOT EXISTS pgcrypto;
+         CREATE TABLE IF NOT EXISTS users (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            firebase_uid text NOT NULL UNIQUE,
+            display_name text,
+            email text,
+            created_at timestamptz NOT NULL DEFAULT now(),
+            updated_at timestamptz NOT NULL DEFAULT now()
+         );
+         CREATE TABLE IF NOT EXISTS notes (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id uuid NOT NULL REFERENCES users(id),
+            task_id uuid,
+            content text NOT NULL,
+            created_at timestamptz NOT NULL DEFAULT now()
+         );",
+    )
+    .await?;
+    Ok(())
+}
+
+async fn reset_test_data(
+    server: &DbServer,
+    payload: ResetTestDataRequest,
+) -> anyhow::Result<Value> {
+    let user_id = payload
+        .user_id
+        .unwrap_or_else(|| "dev-learner".to_string())
+        .trim()
+        .to_string();
+    if user_id.is_empty() {
+        anyhow::bail!("userId is required");
+    }
+
+    let mut provider = server.provider.lock().await;
+    let conn = provider.get_connections().await?;
+
+    if !table_exists(&conn, "users").await? {
+        return Ok(json!({
+            "userId": user_id,
+            "deletedRows": 0
+        }));
+    }
+
+    let mut deleted_rows = 0_u64;
+
+    if table_exists(&conn, "notes").await? {
+        deleted_rows += conn
+            .execute(
+                "DELETE FROM notes n
+                 USING users u
+                 WHERE n.user_id = u.id
+                   AND (u.firebase_uid = $1 OR u.id::text = $1)",
+                &[&user_id],
+            )
+            .await?;
+    }
+
+    if table_exists(&conn, "task_progress").await? {
+        deleted_rows += conn
+            .execute(
+                "DELETE FROM task_progress tp
+                 USING users u
+                 WHERE tp.user_id = u.id
+                   AND (u.firebase_uid = $1 OR u.id::text = $1)",
+                &[&user_id],
+            )
+            .await?;
+    }
+
+    let has_roadmap_graph = all_tables_exist(
+        &conn,
+        &[
+            "projects",
+            "roadmaps",
+            "roadmap_phases",
+            "milestones",
+            "tasks",
+        ],
+    )
+    .await?;
+
+    if has_roadmap_graph {
+        deleted_rows += conn
+            .execute(
+                "DELETE FROM tasks t
+                 USING milestones m, roadmap_phases ph, roadmaps r, projects p, users u
+                 WHERE t.milestone_id = m.id
+                   AND m.phase_id = ph.id
+                   AND ph.roadmap_id = r.id
+                   AND r.project_id = p.id
+                   AND p.user_id = u.id
+                   AND (u.firebase_uid = $1 OR u.id::text = $1)",
+                &[&user_id],
+            )
+            .await?;
+
+        deleted_rows += conn
+            .execute(
+                "DELETE FROM milestones m
+                 USING roadmap_phases ph, roadmaps r, projects p, users u
+                 WHERE m.phase_id = ph.id
+                   AND ph.roadmap_id = r.id
+                   AND r.project_id = p.id
+                   AND p.user_id = u.id
+                   AND (u.firebase_uid = $1 OR u.id::text = $1)",
+                &[&user_id],
+            )
+            .await?;
+
+        deleted_rows += conn
+            .execute(
+                "DELETE FROM roadmap_phases ph
+                 USING roadmaps r, projects p, users u
+                 WHERE ph.roadmap_id = r.id
+                   AND r.project_id = p.id
+                   AND p.user_id = u.id
+                   AND (u.firebase_uid = $1 OR u.id::text = $1)",
+                &[&user_id],
+            )
+            .await?;
+    }
+
+    if all_tables_exist(&conn, &["roadmaps", "projects"]).await? {
+        deleted_rows += conn
+            .execute(
+                "DELETE FROM roadmaps r
+                 USING projects p, users u
+                 WHERE r.project_id = p.id
+                   AND p.user_id = u.id
+                   AND (u.firebase_uid = $1 OR u.id::text = $1)",
+                &[&user_id],
+            )
+            .await?;
+    }
+
+    if table_exists(&conn, "projects").await? {
+        deleted_rows += conn
+            .execute(
+                "DELETE FROM projects p
+                 USING users u
+                 WHERE p.user_id = u.id
+                   AND (u.firebase_uid = $1 OR u.id::text = $1)",
+                &[&user_id],
+            )
+            .await?;
+    }
+
+    deleted_rows += conn
+        .execute(
+            "DELETE FROM users
+             WHERE firebase_uid = $1 OR id::text = $1",
+            &[&user_id],
+        )
+        .await?;
+
+    Ok(json!({
+        "userId": user_id,
+        "deletedRows": deleted_rows
+    }))
+}
+
+async fn seed_test_roadmap(
+    server: &DbServer,
+    payload: SeedRoadmapRequest,
+) -> anyhow::Result<Value> {
+    let mut provider = server.provider.lock().await;
+    let conn = provider.get_connections().await?;
+
+    conn.batch_execute(
+        "CREATE EXTENSION IF NOT EXISTS pgcrypto;
+         CREATE TABLE IF NOT EXISTS users (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            firebase_uid text NOT NULL UNIQUE,
+            display_name text,
+            email text,
+            created_at timestamptz NOT NULL DEFAULT now(),
+            updated_at timestamptz NOT NULL DEFAULT now()
+         );
+         CREATE TABLE IF NOT EXISTS projects (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id uuid NOT NULL REFERENCES users(id),
+            title text NOT NULL,
+            description text,
+            status text NOT NULL DEFAULT 'draft',
+            created_at timestamptz NOT NULL DEFAULT now(),
+            updated_at timestamptz NOT NULL DEFAULT now()
+         );
+         CREATE TABLE IF NOT EXISTS roadmaps (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            project_id uuid NOT NULL REFERENCES projects(id),
+            version int NOT NULL DEFAULT 1,
+            title text,
+            generated_by text,
+            created_at timestamptz NOT NULL DEFAULT now()
+         );
+         CREATE TABLE IF NOT EXISTS roadmap_phases (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            roadmap_id uuid NOT NULL REFERENCES roadmaps(id),
+            phase_order int NOT NULL,
+            title text NOT NULL,
+            description text,
+            estimated_days int
+         );
+         CREATE TABLE IF NOT EXISTS milestones (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            phase_id uuid NOT NULL REFERENCES roadmap_phases(id),
+            milestone_order int NOT NULL,
+            title text NOT NULL,
+            description text
+         );
+         CREATE TABLE IF NOT EXISTS tasks (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            milestone_id uuid NOT NULL REFERENCES milestones(id),
+            task_order int NOT NULL,
+            title text NOT NULL,
+            description text,
+            estimated_hours int,
+            difficulty text,
+            status text
+         );",
+    )
+    .await?;
+
+    let project_title = format!("{} project", payload.title);
+    let row = conn
+        .query_one(
+            "WITH u AS (
+                INSERT INTO users(firebase_uid, display_name, email)
+                VALUES ($1, 'Dev Learner', 'dev-learner@local.test')
+                ON CONFLICT (firebase_uid)
+                DO UPDATE SET display_name = EXCLUDED.display_name, email = EXCLUDED.email, updated_at = now()
+                RETURNING id
+             ), p AS (
+                INSERT INTO projects(user_id, title, description, status)
+                SELECT id, $2, 'DB-backed roadmap test', 'active' FROM u
+                RETURNING id
+             ), r AS (
+                INSERT INTO roadmaps(project_id, version, title, generated_by, created_at)
+                SELECT id, 1, $3, 'database-mcp', now() + interval '1 hour' FROM p
+                RETURNING id
+             ), ph AS (
+                INSERT INTO roadmap_phases(roadmap_id, phase_order, title, description, estimated_days)
+                SELECT id, 1, 'Database phase', 'Loaded from database', 5 FROM r
+                RETURNING id
+             ), m AS (
+                INSERT INTO milestones(phase_id, milestone_order, title, description)
+                SELECT id, 1, 'Database milestone', 'Milestone from database' FROM ph
+                RETURNING id
+             )
+             INSERT INTO tasks(milestone_id, task_order, title, description, estimated_hours, difficulty, status)
+             SELECT id, 1, 'Database task appears on roadmap', 'Task loaded by /roadmap', 2, 'easy', 'pending' FROM m
+             RETURNING id",
+            &[&payload.user_id, &project_title, &payload.title],
+        )
+        .await?;
+    let task_id: uuid::Uuid = row.get("id");
+
+    Ok(json!({
+        "ok": true,
+        "taskId": task_id.to_string(),
+    }))
+}
+
+async fn seed_test_learning_data(
+    server: &DbServer,
+    payload: SeedLearningDataRequest,
+) -> anyhow::Result<Value> {
+    let mut provider = server.provider.lock().await;
+    let conn = provider.get_connections().await?;
+
+    conn.batch_execute(
+        "CREATE EXTENSION IF NOT EXISTS pgcrypto;
+         CREATE TABLE IF NOT EXISTS users (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            firebase_uid text NOT NULL UNIQUE,
+            display_name text,
+            email text,
+            created_at timestamptz NOT NULL DEFAULT now(),
+            updated_at timestamptz NOT NULL DEFAULT now()
+         );
+         CREATE TABLE IF NOT EXISTS projects (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id uuid NOT NULL REFERENCES users(id),
+            title text NOT NULL,
+            description text,
+            status text NOT NULL DEFAULT 'draft',
+            created_at timestamptz NOT NULL DEFAULT now(),
+            updated_at timestamptz NOT NULL DEFAULT now()
+         );
+         CREATE TABLE IF NOT EXISTS roadmaps (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            project_id uuid NOT NULL REFERENCES projects(id),
+            version int NOT NULL DEFAULT 1,
+            title text,
+            generated_by text,
+            created_at timestamptz NOT NULL DEFAULT now()
+         );
+         CREATE TABLE IF NOT EXISTS roadmap_phases (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            roadmap_id uuid NOT NULL REFERENCES roadmaps(id),
+            phase_order int NOT NULL,
+            title text NOT NULL,
+            description text,
+            estimated_days int
+         );
+         CREATE TABLE IF NOT EXISTS milestones (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            phase_id uuid NOT NULL REFERENCES roadmap_phases(id),
+            milestone_order int NOT NULL,
+            title text NOT NULL,
+            description text
+         );
+         CREATE TABLE IF NOT EXISTS tasks (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            milestone_id uuid NOT NULL REFERENCES milestones(id),
+            task_order int NOT NULL,
+            title text NOT NULL,
+            description text,
+            estimated_hours int,
+            difficulty text,
+            status text
+         );
+         CREATE TABLE IF NOT EXISTS notes (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id uuid NOT NULL REFERENCES users(id),
+            task_id uuid REFERENCES tasks(id),
+            content text NOT NULL,
+            created_at timestamptz NOT NULL DEFAULT now()
+         );
+         CREATE TABLE IF NOT EXISTS task_progress (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id uuid NOT NULL REFERENCES users(id),
+            task_id uuid NOT NULL REFERENCES tasks(id),
+            status text NOT NULL,
+            progress_percent int,
+            started_at timestamptz,
+            completed_at timestamptz,
+            UNIQUE(user_id, task_id)
+         );",
+    )
+    .await?;
+
+    let project_title = format!("{} project", payload.title);
+    let task_title = format!("{} review task", payload.title);
+    let note_content = format!(
+        "{} note\nThis note was persisted in Database MCP and loaded by the Notes page.",
+        payload.title
+    );
+
+    let row = conn
+        .query_one(
+            "WITH u AS (
+                INSERT INTO users(firebase_uid, display_name, email)
+                VALUES ($1, 'Dev Learner', 'dev-learner@local.test')
+                ON CONFLICT (firebase_uid)
+                DO UPDATE SET display_name = EXCLUDED.display_name, email = EXCLUDED.email, updated_at = now()
+                RETURNING id
+             ), p AS (
+                INSERT INTO projects(user_id, title, description, status)
+                SELECT id, $2, 'DB-backed learning data test', 'active' FROM u
+                RETURNING id, user_id
+             ), r AS (
+                INSERT INTO roadmaps(project_id, version, title, generated_by)
+                SELECT id, 1, $3, 'database-mcp' FROM p
+                RETURNING id
+             ), ph AS (
+                INSERT INTO roadmap_phases(roadmap_id, phase_order, title, description, estimated_days)
+                SELECT id, 1, 'Learning data phase', 'Loaded from database', 3 FROM r
+                RETURNING id
+             ), m AS (
+                INSERT INTO milestones(phase_id, milestone_order, title, description)
+                SELECT id, 1, 'Learning data milestone', 'Milestone from database' FROM ph
+                RETURNING id
+             ), t AS (
+                INSERT INTO tasks(milestone_id, task_order, title, description, estimated_hours, difficulty, status)
+                SELECT id, 1, $4, 'Task loaded by /review', 2, 'medium', 'needs_review' FROM m
+                RETURNING id
+             ), progress AS (
+                INSERT INTO task_progress(user_id, task_id, status, progress_percent, started_at)
+                SELECT p.user_id, t.id, 'needs_review', 35, now() FROM p, t
+                ON CONFLICT (user_id, task_id)
+                DO UPDATE SET status = EXCLUDED.status, progress_percent = EXCLUDED.progress_percent, started_at = EXCLUDED.started_at
+                RETURNING id
+             )
+             INSERT INTO notes(user_id, task_id, content)
+             SELECT p.user_id, t.id, $5 FROM p, t
+             RETURNING id",
+            &[
+                &payload.user_id,
+                &project_title,
+                &payload.title,
+                &task_title,
+                &note_content,
+            ],
+        )
+        .await?;
+    let note_id: uuid::Uuid = row.get("id");
+
+    Ok(json!({
+        "ok": true,
+        "noteId": note_id.to_string(),
+    }))
 }
 
 #[tool_handler]

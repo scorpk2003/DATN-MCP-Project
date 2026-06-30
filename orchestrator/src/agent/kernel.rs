@@ -28,6 +28,17 @@ pub struct AgentKernel {
     final_output: Map<String, Value>,
 }
 
+const CRITICAL_IDENTIFIER_FIELDS: &[&str] = &[
+    "userId",
+    "roadmapId",
+    "roadmapNodeId",
+    "lessonId",
+    "sessionId",
+    "activityId",
+    "exerciseId",
+    "topicId",
+];
+
 impl Default for AgentKernel {
     fn default() -> Self {
         let planner = llm_client_from_env().unwrap_or_else(|_| llm_client_with_key("test-key"));
@@ -50,6 +61,7 @@ impl AgentKernel {
         session_id: String,
         user_id: Option<String>,
         auth_context: Option<AuthContext>,
+        intent_context: Option<Value>,
     ) -> Result<Self> {
         let mut clients = Vec::new();
         let mut required_failures = Vec::new();
@@ -78,13 +90,14 @@ impl AgentKernel {
                 "No MCP servers are available for orchestration"
             ));
         }
-        let planner = llm_client_from_env()?;
-        let executor = llm_client_from_env()?;
         let mut state = ExecutionState::new(session_id);
         state.context.session_id = state.session_id.clone();
         state.context.user_id = user_id;
         state.context.auth_context = auth_context;
+        state.context.intent_context = intent_context;
         sync_authenticated_user(&clients, state.context.auth_context.as_ref()).await?;
+        let planner = llm_client_from_env()?;
+        let executor = llm_client_from_env()?;
         let evaluation = Vec::new();
         let final_output = Map::new();
         Ok(Self {
@@ -106,6 +119,7 @@ impl AgentKernel {
             state.session_id.clone(),
             state.context.user_id.clone(),
             state.context.auth_context.clone(),
+            state.context.intent_context.clone(),
         )
         .await?;
         kernel.state = state;
@@ -121,6 +135,10 @@ impl AgentKernel {
         info!("Planning started!!!");
         (self.state.plan, self.state.context.goal) =
             PlanStep::plan(goal, &self.planner, &prompt).await?;
+        repair_approval_only_review_plan(
+            &mut self.state.plan,
+            self.state.context.intent_context.as_ref(),
+        );
         info!("Planning completed!!!");
 
         self.continue_run(prompt).await
@@ -332,6 +350,37 @@ impl AgentKernel {
                     };
                 }
                 params = sanitize_tool_params(params);
+                if server == "lesson" && tool == "lesson_finalize" {
+                    params = hydrate_lesson_finalize_level(params, &self.state.context);
+                }
+                let selected_schema = client.tool_schema(tool);
+                if let Some(schema) = selected_schema.as_ref() {
+                    params = hydrate_required_identifiers_from_context(
+                        params,
+                        schema,
+                        &self.state.context,
+                    );
+                    let missing_identifiers = missing_required_identifiers(&params, schema);
+                    if !missing_identifiers.is_empty() {
+                        let missing_message = missing_identifiers.join(", ");
+                        return StepExecutionResult {
+                            success: false,
+                            output: json!({
+                                "code": "MISSING_REQUIRED_CONTEXT",
+                                "server": server,
+                                "tool": tool,
+                                "missing": missing_identifiers,
+                            }),
+                            observation: Some(format!(
+                                "MISSING_REQUIRED_CONTEXT: {}.{} requires {} from existing context before tool execution.",
+                                server, tool, missing_message
+                            )),
+                            waiting: false,
+                            replan: true,
+                        };
+                    }
+                }
+                
 
                 match client.tool_validation(tool, &params) {
                     Ok(_) => info!("Tool validation success!!!"),
@@ -341,13 +390,13 @@ impl AgentKernel {
                         let max_repairs = env_usize("AGENT_MAX_PARAM_REPAIRS", 1);
                         let mut repaired = false;
                         for repair_attempt in 0..max_repairs {
-                            let Some(schema) = client.tool_schema(tool) else {
+                            let Some(schema) = selected_schema.as_ref() else {
                                 break;
                             };
                             match StepBinding::repair_params(
                                 step,
                                 &params,
-                                &schema,
+                                schema,
                                 &validation_error,
                                 &self.state.context,
                                 &self.executor,
@@ -355,23 +404,39 @@ impl AgentKernel {
                             )
                             .await
                             {
-                                Ok(candidate) => match client.tool_validation(tool, &candidate) {
-                                    Ok(_) => {
-                                        info!(
-                                            repair_attempt,
-                                            "Tool params repaired and validated successfully"
-                                        );
-                                        params = candidate;
-                                        repaired = true;
-                                        break;
-                                    }
-                                    Err(error) => {
+                                Ok(candidate) => {
+                                    let candidate = preserve_required_identifiers(
+                                        &params,
+                                        sanitize_tool_params(candidate),
+                                        schema,
+                                    );
+                                    if !missing_required_identifiers(&candidate, schema).is_empty()
+                                    {
                                         error!(
                                             repair_attempt,
-                                            "Repaired params still failed validation: {}", error
+                                            "Repaired params removed required identity fields"
                                         );
+                                        continue;
                                     }
-                                },
+                                    match client.tool_validation(tool, &candidate) {
+                                        Ok(_) => {
+                                            info!(
+                                                repair_attempt,
+                                                "Tool params repaired and validated successfully"
+                                            );
+                                            params = candidate;
+                                            repaired = true;
+                                            break;
+                                        }
+                                        Err(error) => {
+                                            error!(
+                                                repair_attempt,
+                                                "Repaired params still failed validation: {}",
+                                                error
+                                            );
+                                        }
+                                    }
+                                }
                                 Err(error) => {
                                     error!(repair_attempt, "Tool params repair failed: {}", error);
                                 }
@@ -631,67 +696,32 @@ impl AgentKernel {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn resolves_placeholder_with_colon_alias_and_suffix_path() {
-        let mut aliases = HashMap::new();
-        aliases.insert(
-            "phase:orientation".to_string(),
-            json!({ "id": "11111111-1111-1111-1111-111111111111" }),
-        );
-
-        assert_eq!(
-            resolve_placeholder_string("${phase:orientation}.id", &aliases),
-            Some("11111111-1111-1111-1111-111111111111".to_string())
-        );
+fn repair_approval_only_review_plan(plan: &mut Vec<PlanStep>, intent_context: Option<&Value>) {
+    if plan.len() != 1 || !matches!(plan[0].action, StepActions::HumanApproval) {
+        return;
     }
 
-    #[test]
-    fn resolves_placeholder_with_colon_alias_and_inner_path() {
-        let mut aliases = HashMap::new();
-        aliases.insert(
-            "phase:orientation".to_string(),
-            json!({ "id": "11111111-1111-1111-1111-111111111111" }),
-        );
-
-        assert_eq!(
-            resolve_placeholder_string("${phase:orientation.id}", &aliases),
-            Some("11111111-1111-1111-1111-111111111111".to_string())
-        );
+    let intent_type = intent_context
+        .and_then(Value::as_object)
+        .and_then(|context| context.get("type"))
+        .and_then(Value::as_str);
+    if !matches!(
+        intent_type,
+        Some("review.task.selected") | Some("note.review.requested")
+    ) {
+        return;
     }
 
-    #[test]
-    fn trusted_auth_injection_omits_null_optional_strings_and_repairs_user_id() {
-        let mut context = crate::AgentContext::default();
-        context.auth_context = Some(AuthContext {
-            user_id: "firebase-user".to_string(),
-            roles: vec![],
-            scopes: vec!["lesson:write".to_string()],
-            verified: true,
-            verified_by: None,
-            verified_at: None,
-        });
-
-        let params = inject_trusted_auth(
-            json!({
-                "requestId": Value::Null,
-                "authContext": Value::Null,
-                "userId": Value::Null,
-                "lessonId": "lesson-a"
-            }),
-            &context,
-        )
-        .unwrap();
-        let sanitized = sanitize_tool_params(params);
-
-        assert_eq!(sanitized["userId"], "firebase-user");
-        assert!(sanitized.get("requestId").is_none());
-        assert!(sanitized["authContext"].get("verifiedBy").is_none());
-        assert!(sanitized["authContext"].get("verifiedAt").is_none());
-    }
+    plan.push(PlanStep {
+        id: "step 2".to_string(),
+        action: StepActions::Reasoning,
+        step_goal: Some(
+            "After approval, produce a concise JSON lessonDraft for the requested review. Include title, topic, objectives, contentBlocks, resources, exercises, and status. Use intent_context taskId/noteId/concept/title as the review subject; do not return an empty object."
+                .to_string(),
+        ),
+        dependencies: vec![plan[0].id.clone()],
+        final_output: Some("lesson".to_string()),
+    });
 }
 
 async fn sync_authenticated_user(
@@ -788,9 +818,9 @@ fn inject_trusted_auth(params: Value, context: &crate::AgentContext) -> Result<V
         return Err(anyhow::anyhow!("trusted auth_context is not verified"));
     }
     let mut object = params.as_object().cloned().unwrap_or_default();
-    if !object
+    if object
         .get("authContext")
-        .is_some_and(|value| !value.is_null())
+        .is_none_or(|value| value.is_null())
     {
         object.insert("authContext".to_string(), trusted_auth_json(auth_context));
     }
@@ -799,10 +829,10 @@ fn inject_trusted_auth(params: Value, context: &crate::AgentContext) -> Result<V
         .as_deref()
         .filter(|value| !value.trim().is_empty())
         .unwrap_or(auth_context.user_id.as_str());
-    if !object
+    if object
         .get("userId")
         .and_then(Value::as_str)
-        .is_some_and(|value| !value.trim().is_empty())
+        .is_none_or(|value| value.trim().is_empty())
     {
         object.insert(
             "userId".to_string(),
@@ -836,6 +866,126 @@ fn trusted_auth_json(auth_context: &AuthContext) -> Value {
     Value::Object(object)
 }
 
+fn hydrate_required_identifiers_from_context(
+    params: Value,
+    schema: &Value,
+    context: &crate::AgentContext,
+) -> Value {
+    let Value::Object(mut object) = params else {
+        return params;
+    };
+
+    for field in required_critical_identifier_fields(schema) {
+        if has_non_empty_value(object.get(field)) {
+            continue;
+        }
+        if let Some(value) = context_identifier_value(context, field) {
+            object.insert(field.to_string(), value);
+        }
+    }
+
+    Value::Object(object)
+}
+
+fn preserve_required_identifiers(original: &Value, candidate: Value, schema: &Value) -> Value {
+    let Some(original_object) = original.as_object() else {
+        return candidate;
+    };
+    let mut candidate_object = match candidate {
+        Value::Object(object) => object,
+        other => return other,
+    };
+
+    for field in required_critical_identifier_fields(schema) {
+        if let Some(value) = original_object
+            .get(field)
+            .filter(|value| has_non_empty_value(Some(value)))
+        {
+            candidate_object.insert(field.to_string(), value.clone());
+        }
+    }
+
+    Value::Object(candidate_object)
+}
+
+fn missing_required_identifiers(params: &Value, schema: &Value) -> Vec<String> {
+    let object = params.as_object();
+    required_critical_identifier_fields(schema)
+        .into_iter()
+        .filter(|field| !has_non_empty_value(object.and_then(|params| params.get(*field))))
+        .map(str::to_string)
+        .collect()
+}
+
+fn required_critical_identifier_fields(schema: &Value) -> Vec<&'static str> {
+    let Some(required) = schema.get("required").and_then(Value::as_array) else {
+        return Vec::new();
+    };
+
+    CRITICAL_IDENTIFIER_FIELDS
+        .iter()
+        .copied()
+        .filter(|field| {
+            required
+                .iter()
+                .any(|required_field| required_field.as_str() == Some(*field))
+        })
+        .collect()
+}
+
+fn context_identifier_value(context: &crate::AgentContext, field: &str) -> Option<Value> {
+    match field {
+        "userId" => context
+            .user_id
+            .as_deref()
+            .filter(|value| !value.trim().is_empty())
+            .or_else(|| {
+                context
+                    .auth_context
+                    .as_ref()
+                    .map(|auth_context| auth_context.user_id.as_str())
+                    .filter(|value| !value.trim().is_empty())
+            })
+            .map(|value| Value::String(value.to_string())),
+        "sessionId" => (!context.session_id.trim().is_empty())
+            .then(|| Value::String(context.session_id.clone())),
+        _ => context
+            .intent_context
+            .as_ref()
+            .and_then(|intent_context| lookup_intent_identifier(intent_context, field)),
+    }
+}
+
+fn lookup_intent_identifier(intent_context: &Value, field: &str) -> Option<Value> {
+    let object = intent_context.as_object()?;
+    let direct = object
+        .get(field)
+        .filter(|value| has_non_empty_value(Some(value)));
+    if direct.is_some() {
+        return direct.cloned();
+    }
+
+    let alias = match field {
+        "roadmapNodeId" => Some("nodeId"),
+        "activityId" => Some("exerciseId"),
+        _ => None,
+    };
+    alias.and_then(|alias| {
+        object
+            .get(alias)
+            .filter(|value| has_non_empty_value(Some(value)))
+            .cloned()
+    })
+}
+
+fn has_non_empty_value(value: Option<&Value>) -> bool {
+    match value {
+        Some(Value::String(value)) => !value.trim().is_empty(),
+        Some(Value::Null) | None => false,
+        Some(_) => true,
+    }
+}
+
 fn sanitize_tool_params(value: Value) -> Value {
     match value {
         Value::Object(object) => Value::Object(
@@ -852,6 +1002,40 @@ fn sanitize_tool_params(value: Value) -> Value {
         ),
         Value::Array(items) => Value::Array(items.into_iter().map(sanitize_tool_params).collect()),
         other => other,
+    }
+}
+
+fn hydrate_lesson_finalize_level(params: Value, context: &crate::AgentContext) -> Value {
+    let Value::Object(mut object) = params else {
+        return params;
+    };
+    let Some(draft) = object.get_mut("lessonDraft").and_then(Value::as_object_mut) else {
+        return Value::Object(object);
+    };
+    if has_non_empty_value(draft.get("level")) {
+        return Value::Object(object);
+    }
+
+    let level = lesson_level_from_context(context).unwrap_or("beginner");
+    draft.insert("level".to_string(), Value::String(level.to_string()));
+    Value::Object(object)
+}
+
+fn lesson_level_from_context(context: &crate::AgentContext) -> Option<&'static str> {
+    let intent = context.intent_context.as_ref()?.as_object()?;
+    intent
+        .get("level")
+        .or_else(|| intent.get("difficulty"))
+        .and_then(Value::as_str)
+        .and_then(normalize_lesson_level)
+}
+
+fn normalize_lesson_level(value: &str) -> Option<&'static str> {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "beginner" | "easy" => Some("beginner"),
+        "intermediate" | "medium" => Some("intermediate"),
+        "advanced" | "hard" | "expert" => Some("advanced"),
+        _ => None,
     }
 }
 
@@ -947,4 +1131,211 @@ fn find_unresolved_placeholder(value: &Value) -> Option<String> {
         Value::Object(object) => object.values().find_map(find_unresolved_placeholder),
         _ => None,
     }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn resolves_placeholder_with_colon_alias_and_suffix_path() {
+        let mut aliases = HashMap::new();
+        aliases.insert(
+            "phase:orientation".to_string(),
+            json!({ "id": "11111111-1111-1111-1111-111111111111" }),
+        );
+
+        assert_eq!(
+            resolve_placeholder_string("${phase:orientation}.id", &aliases),
+            Some("11111111-1111-1111-1111-111111111111".to_string())
+        );
+    }
+
+    #[test]
+    fn resolves_placeholder_with_colon_alias_and_inner_path() {
+        let mut aliases = HashMap::new();
+        aliases.insert(
+            "phase:orientation".to_string(),
+            json!({ "id": "11111111-1111-1111-1111-111111111111" }),
+        );
+
+        assert_eq!(
+            resolve_placeholder_string("${phase:orientation.id}", &aliases),
+            Some("11111111-1111-1111-1111-111111111111".to_string())
+        );
+    }
+
+    #[test]
+    fn trusted_auth_injection_omits_null_optional_strings_and_repairs_user_id() {
+        let context = crate::AgentContext {
+            auth_context: Some(AuthContext {
+                user_id: "firebase-user".to_string(),
+                roles: vec![],
+                scopes: vec!["lesson:write".to_string()],
+                verified: true,
+                verified_by: None,
+                verified_at: None,
+            }),
+            ..crate::AgentContext::default()
+        };
+
+        let params = inject_trusted_auth(
+            json!({
+                "requestId": Value::Null,
+                "authContext": Value::Null,
+                "userId": Value::Null,
+                "lessonId": "lesson-a"
+            }),
+            &context,
+        )
+        .unwrap();
+        let sanitized = sanitize_tool_params(params);
+
+        assert_eq!(sanitized["userId"], "firebase-user");
+        assert!(sanitized.get("requestId").is_none());
+        assert!(sanitized["authContext"].get("verifiedBy").is_none());
+        assert!(sanitized["authContext"].get("verifiedAt").is_none());
+    }
+
+    #[test]
+    fn hydrates_required_identifiers_from_intent_context() {
+        let context = crate::AgentContext {
+            session_id: "session-a".to_string(),
+            user_id: Some("user-a".to_string()),
+            intent_context: Some(json!({
+                "type": "roadmap.node.selected",
+                "roadmapId": "roadmap-a",
+                "nodeId": "node-a"
+            })),
+            ..crate::AgentContext::default()
+        };
+        let schema = json!({
+            "type": "object",
+            "required": ["userId", "roadmapId", "roadmapNodeId", "node"]
+        });
+
+        let params = hydrate_required_identifiers_from_context(
+            json!({
+                "roadmapId": Value::Null,
+                "node": {"title": "Intro"}
+            }),
+            &schema,
+            &context,
+        );
+
+        assert_eq!(params["userId"], "user-a");
+        assert_eq!(params["roadmapId"], "roadmap-a");
+        assert_eq!(params["roadmapNodeId"], "node-a");
+        assert!(missing_required_identifiers(&params, &schema).is_empty());
+    }
+
+    #[test]
+    fn repairs_review_approval_only_plan_with_followup_reasoning() {
+        let mut plan = vec![PlanStep {
+            id: "step 1".to_string(),
+            action: StepActions::HumanApproval,
+            step_goal: Some("Approve review".to_string()),
+            dependencies: Vec::new(),
+            final_output: None,
+        }];
+
+        repair_approval_only_review_plan(
+            &mut plan,
+            Some(&json!({
+                "type": "review.task.selected",
+                "taskId": "task-a",
+                "concept": "Core concept"
+            })),
+        );
+
+        assert_eq!(plan.len(), 2);
+        assert!(matches!(plan[1].action, StepActions::Reasoning));
+        assert_eq!(plan[1].dependencies, vec!["step 1".to_string()]);
+        assert_eq!(plan[1].final_output.as_deref(), Some("lesson"));
+    }
+
+    #[test]
+    fn detects_missing_required_identifiers_after_sanitize() {
+        let schema = json!({
+            "type": "object",
+            "required": ["roadmapId", "roadmapNodeId", "node"]
+        });
+        let params = sanitize_tool_params(json!({
+            "roadmapId": Value::Null,
+            "roadmapNodeId": "   ",
+            "node": {"title": "Intro"}
+        }));
+
+        assert_eq!(
+            missing_required_identifiers(&params, &schema),
+            vec!["roadmapId".to_string(), "roadmapNodeId".to_string()]
+        );
+    }
+
+    #[test]
+    fn repair_candidate_preserves_existing_required_identifiers() {
+        let schema = json!({
+            "type": "object",
+            "required": ["userId", "roadmapId", "roadmapNodeId", "node"]
+        });
+        let original = json!({
+            "userId": "user-a",
+            "roadmapId": "roadmap-a",
+            "roadmapNodeId": "node-a",
+            "node": {"title": "Intro"}
+        });
+        let candidate = preserve_required_identifiers(
+            &original,
+            json!({
+                "userId": "other-user",
+                "roadmapId": "other-roadmap",
+                "node": {"title": "Intro", "topic": "Rust"}
+            }),
+            &schema,
+        );
+
+        assert_eq!(candidate["userId"], "user-a");
+        assert_eq!(candidate["roadmapId"], "roadmap-a");
+        assert_eq!(candidate["roadmapNodeId"], "node-a");
+        assert_eq!(candidate["node"]["topic"], "Rust");
+    }
+
+    #[test]
+    fn hydrates_missing_lesson_finalize_level_from_intent_context() {
+        let context = crate::AgentContext {
+            intent_context: Some(json!({
+                "type": "roadmap.task.selected",
+                "level": "medium"
+            })),
+            ..crate::AgentContext::default()
+        };
+
+        let params = hydrate_lesson_finalize_level(
+            json!({
+                "lessonDraft": {
+                    "title": "SQL joins",
+                    "topic": "SQL joins"
+                }
+            }),
+            &context,
+        );
+
+        assert_eq!(params["lessonDraft"]["level"], "intermediate");
+    }
+
+    #[test]
+    fn defaults_missing_lesson_finalize_level_to_beginner() {
+        let params = hydrate_lesson_finalize_level(
+            json!({
+                "lessonDraft": {
+                    "title": "SQL joins",
+                    "topic": "SQL joins"
+                }
+            }),
+            &crate::AgentContext::default(),
+        );
+
+        assert_eq!(params["lessonDraft"]["level"], "beginner");
+    }
+
 }

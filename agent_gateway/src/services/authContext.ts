@@ -23,8 +23,8 @@ export function buildAuthContext(
   config: GatewayConfig,
   fallbackUserId?: string,
 ): TrustedAuthContext | undefined {
-  const bearer = readBearerToken(request);
-  const explicitUserId = readHeader(request, "x-user-id") ?? fallbackUserId;
+  const bearer = readBearerToken(request) ?? readQueryValue(request, "access_token");
+  const explicitUserId = readHeader(request, "x-user-id") ?? readQueryValue(request, "userId") ?? fallbackUserId;
 
   if (bearer) {
     return {
@@ -36,7 +36,7 @@ export function buildAuthContext(
     };
   }
 
-  if (!config.allowDevAuthContext && !explicitUserId) {
+  if (!config.allowDevAuthContext) {
     return undefined;
   }
 
@@ -64,6 +64,15 @@ function readHeader(request: Request | undefined, key: string) {
   const value = request?.headers[key];
   if (Array.isArray(value)) {
     return value[0];
+  }
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function readQueryValue(request: Request | undefined, key: string) {
+  const value = request?.query?.[key];
+  if (Array.isArray(value)) {
+    const first = value[0];
+    return typeof first === "string" && first.trim() ? first.trim() : undefined;
   }
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }

@@ -7,6 +7,7 @@ import type { RunProcessor } from "../services/runProcessor.js";
 import { buildAuthContext } from "../services/authContext.js";
 import type { GatewayConfig } from "../config.js";
 import { nowIso } from "../services/id.js";
+import { requireSessionAccess } from "../services/sessionAccess.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { routeParam } from "./params.js";
 
@@ -18,9 +19,7 @@ export function actionsRouter(runProcessor: RunProcessor, config: GatewayConfig)
     asyncHandler(async (request, response) => {
       const sessionId = routeParam(request.params.sessionId, "sessionId");
       const actionId = routeParam(request.params.actionId, "actionId");
-      if (!sessionStore.getSession(sessionId)) {
-        throw new GatewayError("SESSION_NOT_FOUND", "Session not found.", 404);
-      }
+      const { authContext } = requireSessionAccess(request, config, sessionId);
 
       const action = sessionStore.getAction(sessionId, actionId);
       if (!action) {
@@ -57,7 +56,6 @@ export function actionsRouter(runProcessor: RunProcessor, config: GatewayConfig)
         throw new GatewayError("SESSION_NOT_FOUND", "Session not found.", 404);
       }
 
-      const authContext = buildAuthContext(request, config, sessionStore.getSession(sessionId)?.userId);
       eventBus.publish(sessionId, run.id, {
         type: "run.status_changed",
         status: "queued",
@@ -70,6 +68,8 @@ export function actionsRouter(runProcessor: RunProcessor, config: GatewayConfig)
           stepId: action.metadata.stepId,
           decision: normalizeApprovalDecision(input.selectedOptionId),
           comment: typeof input.payload?.comment === "string" ? input.payload.comment : undefined,
+          resumeGoal: typeof action.metadata.resumeGoal === "string" ? action.metadata.resumeGoal : undefined,
+          resumeContext: isRecord(action.metadata.resumeContext) ? action.metadata.resumeContext : undefined,
           authContext,
         });
 
@@ -81,7 +81,7 @@ export function actionsRouter(runProcessor: RunProcessor, config: GatewayConfig)
         return;
       }
 
-      const intent = actionResponseToIntent(input.selectedOptionId, input.payload);
+      const intent = actionResponseToIntent(input.selectedOptionId, input.payload, action.metadata);
       runProcessor.start({
         sessionId,
         runId: run.id,
@@ -107,12 +107,20 @@ function normalizeApprovalDecision(value: string): "approve" | "reject" | "revis
   return "approve";
 }
 
-function actionResponseToIntent(selectedOptionId: string, payload: Record<string, unknown> | undefined): UserIntent {
+function actionResponseToIntent(
+  selectedOptionId: string,
+  payload: Record<string, unknown> | undefined,
+  metadata: Record<string, unknown> | undefined,
+): UserIntent {
   if (selectedOptionId === "backfill_first") {
+    const topicId = stringValue(payload?.topicId) ?? stringValue(metadata?.topicId);
+    if (!topicId) {
+      throw new GatewayError("INVALID_REQUEST", "Backfill action is missing topicId.", 409);
+    }
     return {
       type: "resource.backfill.requested",
       payload: {
-        topicId: typeof payload?.topicId === "string" ? payload.topicId : "current_roadmap",
+        topicId,
         reason: "User requested resource backfill from a pending action.",
         priority: "normal",
       },
@@ -125,4 +133,12 @@ function actionResponseToIntent(selectedOptionId: string, payload: Record<string
       message: `User selected action option: ${selectedOptionId}`,
     },
   };
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

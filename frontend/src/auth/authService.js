@@ -87,3 +87,11 @@ export async function getAuthToken() {
 
   return auth.currentUser.getIdToken();
 }
+
+export function getAuthUserId() {
+  if (ALLOW_DEV_AUTH) {
+    return devUser.uid;
+  }
+
+  return getFirebaseAuth()?.currentUser?.uid ?? null;
+}

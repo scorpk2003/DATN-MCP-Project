@@ -2,7 +2,7 @@ import { faCalendarCheck } from "@fortawesome/free-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Badge, Button, Card, ProgressBar } from "../../../components/ui";
 
-export function RoadmapHero({ summary }) {
+export function RoadmapHero({ summary, onScheduleUpdate, loading = false }) {
   return (
     <Card className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div className="min-w-0 space-y-4">
@@ -21,14 +21,8 @@ export function RoadmapHero({ summary }) {
           <p className="text-sm font-semibold text-[var(--text-muted)]">Milestone tiếp theo</p>
           <p className="mt-2 text-lg font-bold text-[var(--text-primary)]">{summary.nextMilestone}</p>
         </div>
-        <ProgressBar
-          value={summary.progress}
-          max={1}
-          tone="success"
-          label="Roadmap progress"
-          showLabel
-        />
-        <Button variant="secondary">
+        <ProgressBar value={summary.progress} max={1} tone="success" label="Roadmap progress" showLabel />
+        <Button variant="secondary" onClick={onScheduleUpdate} loading={loading} aria-label="Update schedule">
           <FontAwesomeIcon icon={faCalendarCheck} />
           Cập nhật lịch
         </Button>

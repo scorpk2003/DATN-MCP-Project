@@ -5,6 +5,7 @@ import {
   faPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../auth/useAuth.js";
 import { Button, InlineAlert, Skeleton } from "../../../components/ui";
@@ -12,7 +13,7 @@ import { useNavigationData } from "../../../hooks/useNavigationData.js";
 
 function RcmBeginCourse() {
   const { signOut, user } = useAuth();
-  const { data, error, loading } = useNavigationData();
+  const { data, error, loading, reload } = useNavigationData();
   const { recentChats, sidebarItems } = data;
   const navigate = useNavigate();
 
@@ -25,6 +26,11 @@ function RcmBeginCourse() {
     });
     window.dispatchEvent(new CustomEvent("selflearn:create-roadmap", { detail: { draftPrompt } }));
   };
+
+  useEffect(() => {
+    window.addEventListener("selflearn:navigation-refresh", reload);
+    return () => window.removeEventListener("selflearn:navigation-refresh", reload);
+  }, [reload]);
 
   return (
     <aside className="flex h-full min-h-0 flex-col gap-6 bg-[var(--bg-inverse)] px-4 py-5 text-[var(--text-inverse)] lg:min-h-screen lg:sticky lg:top-0">
@@ -75,17 +81,17 @@ function RcmBeginCourse() {
           </h2>
         </div>
         <div className="space-y-1 overflow-y-auto pr-1">
-          {error ? (
-            <InlineAlert title="Không tải được dữ liệu" tone="risk" />
-          ) : null}
+          {error ? <InlineAlert title="Không tải được dữ liệu" tone="risk" /> : null}
           {recentChats.map((chat) => (
-            <div
+            <button
+              type="button"
               key={chat.id}
-              className="flex cursor-pointer items-center gap-2 rounded-[var(--radius-md)] px-3 py-2 text-sm text-[var(--sl-sidebar-text-muted)] hover:bg-[var(--sl-sidebar-hover-bg)] hover:text-[var(--text-inverse)]"
+              className="flex w-full cursor-pointer items-center gap-2 rounded-[var(--radius-md)] px-3 py-2 text-left text-sm text-[var(--sl-sidebar-text-muted)] hover:bg-[var(--sl-sidebar-hover-bg)] hover:text-[var(--text-inverse)]"
+              onClick={() => navigate(chat.path || "/")}
             >
               <span className="min-w-0 flex-1 truncate">{chat.label}</span>
               <FontAwesomeIcon icon={faEllipsisVertical} className="shrink-0 text-xs" />
-            </div>
+            </button>
           ))}
         </div>
       </section>

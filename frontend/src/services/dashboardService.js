@@ -8,7 +8,7 @@ import {
 import { request } from "../lib/httpClient.js";
 
 export async function getDashboardData() {
-  return request("/api/dashboard", {
+  return request("/dashboard", {
     fallback: () => ({
       learner,
       quickPrompts,
@@ -20,7 +20,7 @@ export async function getDashboardData() {
 }
 
 export async function getRecommendedCourses() {
-  return request("/api/courses/recommended", {
+  return request("/courses/recommended", {
     fallback: () => recommendedCourses,
   });
 }

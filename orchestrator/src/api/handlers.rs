@@ -29,6 +29,7 @@ pub struct AgentRequest {
     pub session_id: String,
     pub user_id: Option<String>,
     pub auth_context: Option<AuthContext>,
+    pub context: Option<Value>,
 }
 
 #[derive(Deserialize)]
@@ -105,6 +106,7 @@ pub async fn agent_handler(
         payload.session_id.clone(),
         payload.user_id,
         payload.auth_context,
+        payload.context,
     )
     .await
     {

@@ -1,5 +1,5 @@
 import type { GatewayConfig } from "../config.js";
-import { intentToGoal } from "../adapters/intentAdapter.js";
+import { intentToGoal, intentToOrchestratorContext } from "../adapters/intentAdapter.js";
 import { normalizeOrchestratorOutput } from "../adapters/orchestratorOutputAdapter.js";
 import type { UserIntent } from "../protocol/index.js";
 import { GatewayError } from "./errors.js";
@@ -70,6 +70,8 @@ export class RunProcessor {
     stepId: string;
     decision: "approve" | "reject" | "revise";
     comment?: string;
+    resumeGoal?: string;
+    resumeContext?: Record<string, unknown>;
     authContext?: TrustedAuthContext;
   }) {
     setImmediate(() => {
@@ -128,6 +130,7 @@ export class RunProcessor {
       sessionId: input.sessionId,
       userId: input.authContext?.userId ?? sessionStore.getSession(input.sessionId)?.userId,
       authContext: input.authContext,
+      context: intentToOrchestratorContext(input.intent),
       signal: controller.signal,
     });
 
@@ -138,7 +141,7 @@ export class RunProcessor {
       resultSummary: response.message,
     });
 
-    maybeRequireApprovalAction(input.sessionId, input.runId, response);
+    maybeRequireApprovalAction(input.sessionId, input.runId, response, goal, intentToOrchestratorContext(input.intent));
     if (response.status === "waiting_for_user") {
       sessionStore.updateRun(input.sessionId, input.runId, {
         status: "waiting_for_user",
@@ -152,7 +155,7 @@ export class RunProcessor {
       return;
     }
 
-    const normalized = normalizeOrchestratorOutput(response.output, goal);
+    const normalized = normalizeOrchestratorOutput(response.output, goal, intentToOrchestratorContext(input.intent));
     if (normalized.type === "artifacts") {
       for (const artifact of normalized.artifacts) {
         const validated = validateArtifact(artifact);
@@ -165,7 +168,11 @@ export class RunProcessor {
         type: "agent.message",
         message: normalized.summary ?? "Agent output was converted into UI artifacts.",
       });
-      maybeRequireRoadmapAction(input.sessionId, input.runId, normalized.artifacts[0]?.kind === "roadmap" ? normalized.artifacts[0] : null);
+      maybeRequireRoadmapAction(
+        input.sessionId,
+        input.runId,
+        normalized.artifacts[0]?.kind === "roadmap" ? normalized.artifacts[0] : null,
+      );
     } else {
       eventBus.publish(input.sessionId, input.runId, {
         type: "agent.message",
@@ -199,6 +206,8 @@ export class RunProcessor {
     stepId: string;
     decision: "approve" | "reject" | "revise";
     comment?: string;
+    resumeGoal?: string;
+    resumeContext?: Record<string, unknown>;
     authContext?: TrustedAuthContext;
   }) {
     const controller = new AbortController();
@@ -237,7 +246,7 @@ export class RunProcessor {
       displayName: "Resuming Orchestrator Agent",
       resultSummary: response.message,
     });
-    maybeRequireApprovalAction(input.sessionId, input.runId, response);
+    maybeRequireApprovalAction(input.sessionId, input.runId, response, input.resumeGoal, input.resumeContext);
     if (response.status === "waiting_for_user") {
       sessionStore.updateRun(input.sessionId, input.runId, {
         status: "waiting_for_user",
@@ -251,7 +260,11 @@ export class RunProcessor {
       return;
     }
 
-    const normalized = normalizeOrchestratorOutput(response.output, `Resume approval step ${input.stepId}`);
+    const normalized = normalizeOrchestratorOutput(
+      response.output,
+      input.resumeGoal ?? `Resume approval step ${input.stepId}`,
+      input.resumeContext,
+    );
     if (normalized.type === "artifacts") {
       for (const artifact of normalized.artifacts) {
         const validated = validateArtifact(artifact);
@@ -292,7 +305,13 @@ export class RunProcessor {
   }
 }
 
-function maybeRequireApprovalAction(sessionId: string, runId: string, response: { status?: string; output?: unknown }) {
+function maybeRequireApprovalAction(
+  sessionId: string,
+  runId: string,
+  response: { status?: string; output?: unknown },
+  resumeGoal?: string,
+  resumeContext?: Record<string, unknown>,
+) {
   if (response.status !== "waiting_for_user") {
     return;
   }
@@ -322,13 +341,23 @@ function maybeRequireApprovalAction(sessionId: string, runId: string, response: 
       metadata: {
         kind: "orchestrator_approval",
         stepId,
+        ...(resumeGoal ? { resumeGoal } : {}),
+        ...(resumeContext ? { resumeContext } : {}),
       },
     },
   });
 }
 
-function maybeRequireRoadmapAction(sessionId: string, runId: string, artifact: { coverageStatus: string } | null) {
+function maybeRequireRoadmapAction(
+  sessionId: string,
+  runId: string,
+  artifact: { coverageStatus: string; nodes?: Array<{ id: string; coverageStatus?: string }> } | null,
+) {
   if (!artifact || artifact.coverageStatus === "good") {
+    return;
+  }
+  const topicId = artifact.nodes?.find((node) => node.coverageStatus !== "good")?.id;
+  if (!topicId) {
     return;
   }
 
@@ -346,6 +375,9 @@ function maybeRequireRoadmapAction(sessionId: string, runId: string, artifact: {
       ],
       status: "pending",
       createdAt: nowIso(),
+      metadata: {
+        topicId,
+      },
     },
   });
 }

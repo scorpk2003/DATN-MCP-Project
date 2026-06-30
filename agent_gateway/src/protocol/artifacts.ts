@@ -6,6 +6,7 @@ export const roadmapNodeSchema = z.object({
   type: z.enum(["foundation", "concept", "skill", "practice", "checkpoint", "project"]),
   status: z.enum(["locked", "ready", "active", "completed", "blocked"]),
   coverageStatus: z.enum(["good", "partial", "missing"]),
+  level: z.enum(["beginner", "intermediate", "advanced", "unknown"]).optional(),
   lessonId: z.string().optional(),
   position: z
     .object({

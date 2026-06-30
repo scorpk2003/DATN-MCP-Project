@@ -1,0 +1,20 @@
+{
+  "name": "datn-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "e2e:mock:up": "docker compose -f docker-compose.e2e.mock.yml up -d --build",
+    "e2e:mock:down": "docker compose -f docker-compose.e2e.mock.yml down -v",
+    "e2e:mock:logs": "docker compose -f docker-compose.e2e.mock.yml logs --tail=200",
+    "e2e:up": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/e2e-up.ps1",
+    "e2e:down": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/e2e-down.ps1",
+    "e2e:logs": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/e2e-logs.ps1",
+    "seed:e2e": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/seed-e2e-db.ps1",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
+  }
+}

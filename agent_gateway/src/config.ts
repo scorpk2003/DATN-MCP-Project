@@ -7,6 +7,7 @@ export type GatewayConfig = {
   orchestratorTimeoutMs: number;
   corsOrigin: string;
   resourceServiceBaseUrl: string;
+  databaseMcpBaseUrl: string;
   allowDevAuthContext: boolean;
 };
 
@@ -27,5 +28,8 @@ export const config: GatewayConfig = {
   orchestratorTimeoutMs: readNumber("ORCHESTRATOR_TIMEOUT_MS", 120000),
   corsOrigin: process.env.CORS_ORIGIN || "http://localhost:5173",
   resourceServiceBaseUrl: process.env.RESOURCE_SERVICE_BASE_URL || "http://localhost:3200",
-  allowDevAuthContext: process.env.AGENT_GATEWAY_ALLOW_DEV_AUTH !== "false",
+  databaseMcpBaseUrl:
+    process.env.DATABASE_MCP_BASE_URL ||
+    `http://${process.env.SERVER_DATABASE_HOST || "localhost"}:${process.env.SERVER_DATABASE_PORT || "3101"}`,
+  allowDevAuthContext: process.env.AGENT_GATEWAY_ALLOW_DEV_AUTH === "true",
 };

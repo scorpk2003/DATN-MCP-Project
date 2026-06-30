@@ -55,6 +55,51 @@ export const roadmapRegenerateRequestedIntentSchema = z.object({
   }),
 });
 
+export const roadmapScheduleUpdateRequestedIntentSchema = z.object({
+  type: z.literal("roadmap.schedule_update.requested"),
+  payload: z.object({
+    roadmapId: z.string().min(1),
+    title: z.string().trim().min(1).optional(),
+    nextMilestone: z.string().trim().min(1).optional(),
+  }),
+});
+
+export const roadmapTaskSelectedIntentSchema = z.object({
+  type: z.literal("roadmap.task.selected"),
+  payload: z.object({
+    roadmapId: z.string().min(1),
+    phaseId: z.string().min(1).optional(),
+    milestoneId: z.string().min(1).optional(),
+    taskId: z.string().min(1),
+    title: z.string().trim().min(1),
+    description: z.string().optional(),
+    level: z.enum(["beginner", "intermediate", "advanced"]).optional(),
+  }),
+});
+
+export const noteReviewRequestedIntentSchema = z.object({
+  type: z.literal("note.review.requested"),
+  payload: z.object({
+    noteId: z.string().min(1).optional(),
+    taskId: z.string().min(1).optional(),
+    title: z.string().trim().min(1),
+    content: z.string().optional(),
+    course: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+  }),
+});
+
+export const reviewTaskSelectedIntentSchema = z.object({
+  type: z.literal("review.task.selected"),
+  payload: z.object({
+    taskId: z.string().min(1).optional(),
+    concept: z.string().trim().min(1),
+    course: z.string().optional(),
+    confidence: z.number().min(0).max(1).optional(),
+    due: z.string().optional(),
+  }),
+});
+
 export const userIntentSchema = z.discriminatedUnion("type", [
   goalSubmittedIntentSchema,
   freeChatSubmittedIntentSchema,
@@ -62,6 +107,10 @@ export const userIntentSchema = z.discriminatedUnion("type", [
   lessonAnswerSubmittedIntentSchema,
   resourceBackfillRequestedIntentSchema,
   roadmapRegenerateRequestedIntentSchema,
+  roadmapScheduleUpdateRequestedIntentSchema,
+  roadmapTaskSelectedIntentSchema,
+  noteReviewRequestedIntentSchema,
+  reviewTaskSelectedIntentSchema,
 ]);
 
 export const sendIntentRequestSchema = z.object({

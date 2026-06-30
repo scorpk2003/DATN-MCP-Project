@@ -24,6 +24,7 @@ impl UserTool {
     pub async fn create_user(&self, param: CreateUserParam) -> Result<Value> {
         let mut provider = self.provider.lock().await;
         let conn = provider.get_connections().await?;
+        ensure_user_table(&conn).await?;
         info!(
             "\tCreate user query start: firebase_uid={}",
             param.firebase_id
@@ -43,6 +44,7 @@ impl UserTool {
     pub async fn upsert_user(&self, param: UpsertUserParam) -> Result<Value> {
         let mut provider = self.provider.lock().await;
         let conn = provider.get_connections().await?;
+        ensure_user_table(&conn).await?;
         info!(
             "\tUpsert user query start: firebase_uid={}",
             param.firebase_id
@@ -67,6 +69,7 @@ impl UserTool {
     pub async fn get_user_by_id(&self, param: GetUserByIdParam) -> Result<Value> {
         let mut provider = self.provider.lock().await;
         let conn = provider.get_connections().await?;
+        ensure_user_table(&conn).await?;
         info!("\tGet user by firebase_uid query start");
         let row = conn
             .query_opt(
@@ -78,6 +81,22 @@ impl UserTool {
         info!("\tGet user by firebase_uid query completed");
         Ok(row.map(common::user).unwrap_or(Value::Null))
     }
+}
+
+async fn ensure_user_table(conn: &deadpool_postgres::Object) -> Result<()> {
+    conn.batch_execute(
+        "CREATE EXTENSION IF NOT EXISTS pgcrypto;
+         CREATE TABLE IF NOT EXISTS users (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            firebase_uid text NOT NULL UNIQUE,
+            display_name text,
+            email text,
+            created_at timestamptz NOT NULL DEFAULT now(),
+            updated_at timestamptz NOT NULL DEFAULT now()
+         );",
+    )
+    .await?;
+    Ok(())
 }
 
 #[cfg(test)]

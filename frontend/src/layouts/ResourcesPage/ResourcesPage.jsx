@@ -32,9 +32,7 @@ function ResourcesPage() {
   }, [activeCourse, activeType, query, resources]);
 
   const selectedResource =
-    filteredResources.find((resource) => resource.id === selectedResourceId) ||
-    filteredResources[0] ||
-    null;
+    filteredResources.find((resource) => resource.id === selectedResourceId) || filteredResources[0] || null;
 
   if (loading) {
     return <LoadingState layout="grid" title="Đang tải kho tài liệu..." />;

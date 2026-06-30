@@ -248,6 +248,7 @@ fn validate_plan_tools(steps: &[PlanStep], prompt: &PromptBuilder) -> Result<()>
     Ok(())
 }
 
+#[cfg(test)]
 mod test {
     use crate::agent::prompt::ToolCatalogServer;
 

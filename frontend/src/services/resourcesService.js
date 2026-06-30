@@ -2,7 +2,7 @@ import { resourceCourses, resources, resourceTypes } from "../data/resourcesData
 import { request } from "../lib/httpClient.js";
 
 export async function getResourcesData() {
-  return request("/api/resources", {
+  return request("/resources", {
     fallback: () => ({
       resourceCourses,
       resources,

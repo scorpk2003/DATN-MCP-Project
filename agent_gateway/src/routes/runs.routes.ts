@@ -1,11 +1,13 @@
 import { Router } from "express";
+import type { GatewayConfig } from "../config.js";
 import { GatewayError } from "../services/errors.js";
 import { sessionStore } from "../services/sessionStore.js";
+import { requireSessionAccess } from "../services/sessionAccess.js";
 import type { RunProcessor } from "../services/runProcessor.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { routeParam } from "./params.js";
 
-export function runsRouter(runProcessor: RunProcessor) {
+export function runsRouter(runProcessor: RunProcessor, config: GatewayConfig) {
   const router = Router();
 
   router.post(
@@ -13,9 +15,7 @@ export function runsRouter(runProcessor: RunProcessor) {
     asyncHandler(async (request, response) => {
       const sessionId = routeParam(request.params.sessionId, "sessionId");
       const runId = routeParam(request.params.runId, "runId");
-      if (!sessionStore.getSession(sessionId)) {
-        throw new GatewayError("SESSION_NOT_FOUND", "Session not found.", 404);
-      }
+      requireSessionAccess(request, config, sessionId);
 
       const run = runProcessor.cancel(sessionId, runId);
       if (!run) {

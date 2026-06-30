@@ -266,7 +266,7 @@ impl StepBinding {
         let params_json = serde_json::to_string(params)?;
         let schema_json = serde_json::to_string_pretty(schema)?;
         let user_prompt = format!(
-            "Repair tool parameters only.\n\nStep goal: {step_goal}\n\nValidation error: {validation_error}\n\nCurrent params JSON:\n{params_json}\n\nTool input schema:\n{schema_json}\n\nAgent context JSON:\n{context_json}\n\nReturn only the repaired JSON params object. Do not wrap it in binding. Do not include markdown. Do not invent trusted auth fields."
+            "Repair tool parameters only.\n\nStep goal: {step_goal}\n\nValidation error: {validation_error}\n\nCurrent params JSON:\n{params_json}\n\nTool input schema:\n{schema_json}\n\nAgent context JSON:\n{context_json}\n\nReturn only the repaired JSON params object. Do not wrap it in binding. Do not include markdown. Do not invent trusted auth fields. Do not create or modify identifier fields such as userId, roadmapId, roadmapNodeId, lessonId, sessionId, activityId, exerciseId, or topicId."
         );
         let request = CreateChatCompletionRequest {
             messages: vec![

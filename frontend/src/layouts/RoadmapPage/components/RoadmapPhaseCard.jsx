@@ -1,8 +1,8 @@
 import { faCheckCircle, faCircle } from "@fortawesome/free-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Badge, Card, ProgressBar } from "../../../components/ui";
+import { Badge, Button, Card, ProgressBar } from "../../../components/ui";
 
-export function RoadmapPhaseCard({ phase }) {
+export function RoadmapPhaseCard({ phase, onStartTask, startingId }) {
   const isCompleted = phase.status === "completed";
 
   return (
@@ -22,9 +22,25 @@ export function RoadmapPhaseCard({ phase }) {
       <ProgressBar value={phase.progress} max={1} tone={phase.tone} label={phase.title} showLabel />
       <ul className="space-y-2">
         {phase.tasks.map((task) => (
-          <li key={task} className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-info)]" />
-            <span>{task}</span>
+          <li
+            key={task.id || task.title || task}
+            className="flex items-center justify-between gap-3 text-sm text-[var(--text-secondary)]"
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-info)]" />
+              <span className="min-w-0 truncate">{task.title || task}</span>
+            </span>
+            {typeof task === "object" ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                loading={startingId === (task.taskId || task.id)}
+                disabled={Boolean(startingId)}
+                onClick={() => onStartTask?.(phase, task)}
+              >
+                Học
+              </Button>
+            ) : null}
           </li>
         ))}
       </ul>
